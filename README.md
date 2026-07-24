@@ -5,6 +5,15 @@ proxy. The focus is protection and quality-of-life: it hardens the client agains
 lobby/network crash exploits that plague BO3 and smooths out the worst of the engine's
 rough edges. Zero external dependencies, including a from-scratch x64 inline-hook engine.
 
+## Verified
+
+Running on a live Black Ops III process — every module initializes and every inline hook
+lands cleanly (no `undecodable prologue` failures), all placed by the in-house x64 hook
+engine. The `oob(sv): connect` line at the bottom is the guard filtering real inbound
+connection traffic in real time.
+
+![t7-release startup log](docs/startup-log.png)
+
 ## Features
 
 Every string in the binary is RC4-encrypted at compile time (per-string unique key), so
