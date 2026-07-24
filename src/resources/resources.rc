@@ -1,0 +1,7 @@
+#include "resources.hpp"
+
+RES_CRC_ZERO_RCX_6   RCDATA "..\\..\\data\\zero_rcx_6.bin"
+RES_CRC_ZERO_RCX_8   RCDATA "..\\..\\data\\zero_rcx_8.bin"
+RES_CRC_ZERO_RAX_RDX RCDATA "..\\..\\data\\zero_rax_rdx.bin"
+
+RES_LOGO_BANNER      RCDATA "..\\..\\data\\banner_glitch.gif"
