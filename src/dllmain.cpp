@@ -20,6 +20,9 @@
 #include "patches/steamqol/steamqol.hpp"
 #include "patches/antiquit/antiquit.hpp"
 #include "patches/hotkeys/hotkeys.hpp"
+#include "patches/workshop/workshop.hpp"
+#include "patches/servercmd/servercmd.hpp"
+#include "patches/video/video.hpp"
 #include "features/logo/logo.hpp"
 
 static DWORD WINAPI main_thread(LPVOID param)
@@ -66,6 +69,12 @@ static DWORD WINAPI main_thread(LPVOID param)
     antiquit::initialize();
 
     hotkeys::initialize();
+
+    workshop::initialize();
+
+    servercmd::initialize();
+
+    video::initialize();
 
     features::logo::initialize();
 

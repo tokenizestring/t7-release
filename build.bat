@@ -59,6 +59,9 @@ cl.exe /nologo /O2 /Gy /GR- /std:c++17 /EHsc /MT /W3 /LD ^
     src\patches\steamqol\steamqol.cpp ^
     src\patches\antiquit\antiquit.cpp ^
     src\patches\hotkeys\hotkeys.cpp ^
+    src\patches\workshop\workshop.cpp ^
+    src\patches\servercmd\servercmd.cpp ^
+    src\patches\video\video.cpp ^
     src\features\logo\logo.cpp ^
     src\utils\hook\hook.cpp ^
     src\utils\hook\lde.cpp ^

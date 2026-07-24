@@ -1,0 +1,42 @@
+#include "workshop.hpp"
+#include "../../engine/engine.hpp"
+#include "../../utils/hook/hook.hpp"
+#include "../../utils/log/log.hpp"
+#include "../../utils/crypt/crypt.hpp"
+
+#include <cstring>
+
+namespace workshop
+{
+    static int64_t __fastcall hk_apply_game_state(uint32_t a1, int64_t a2, int64_t a3, int64_t message)
+    {
+        if (message != 0)
+        {
+            engine::lobby_state_msg_s* state = reinterpret_cast<engine::lobby_state_msg_s*>(message);
+
+            if (state->ugc_name[0] != 0)
+            {
+                char name[33] = {};
+
+                memcpy(name, state->ugc_name, sizeof(state->ugc_name));
+
+                T7_LOG(std::string(cx("workshop: blocked host-forced ugc '")) + name + cx("'"));
+
+                memset(state->ugc_name, 0, sizeof(state->ugc_name));
+
+                state->ugc_version = 0;
+            }
+        }
+
+        return engine::apply_game_state_fn(a1, a2, a3, message);
+    }
+
+    void initialize()
+    {
+        engine::apply_game_state_fn = reinterpret_cast<engine::apply_game_state_t>(engine::base() + engine::lobby_apply_game_state);
+
+        utils::hook::attach(reinterpret_cast<void**>(&engine::apply_game_state_fn), hk_apply_game_state);
+
+        T7_LOG(cx("workshop: host-forced ugc guard installed"));
+    }
+}

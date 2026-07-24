@@ -131,6 +131,36 @@ namespace engine
 
         lobby_pkg_data = 0x1EEA3B0,
 
+        lobby_apply_game_state = 0x1EC7110,
+
+        cl_get_server_command = 0x131FC70,
+
+        cl_set_config_string = 0x1320180,
+
+        bg_cache_checksum = 0xA9CB0,
+
+        bg_cache_state = 0x3EC4DF0,
+
+        configstring_pool = 0x56AA998,
+
+        configstring_offsets = 0x56A3828,
+
+        configstring_pool_size = 0x56BA998,
+
+        bcs_buffer = 0x52C5430,
+
+        cg_server_command = 0xF755E0,
+
+        cg_message_format = 0x814150,
+
+        cmd_get_argv = 0xACA00,
+
+        cmd_string_to_int = 0x227C850,
+
+        cmd_string_atoi = 0x2BC2F5C,
+
+        client_connection_ptr = 0x5359BB8,
+
         menu_blocked_jnz = 0x2233BF9,
 
         client_state_ptr = 0x1976CA80,
@@ -162,6 +192,10 @@ namespace engine
         steam_rich_presence_steamid = 0x1EA4BB0,
 
         cl_disconnect_cmd = 0x134CCD0,
+
+        cinematic_play = 0x12BE3C0,
+
+        cinematic_open = 0x12BE640,
 
         cinematic_stop = 0x12BEA90,
 
@@ -266,6 +300,38 @@ namespace engine
     static_assert(sizeof(client_data_s) == 0x342720, "client_data_s stride");
 
     static_assert(offsetof(client_data_s, match_flags) == 0x18, "client_data_s match_flags");
+
+    struct lobby_state_msg_s
+    {
+        uint8_t pad_0000[0x53A0];
+
+        char ugc_name[32];
+
+        uint32_t ugc_version;
+    };
+
+    static_assert(offsetof(lobby_state_msg_s, ugc_name) == 21408, "lobby_state_msg_s ugc_name");
+
+    static_assert(offsetof(lobby_state_msg_s, ugc_version) == 21440, "lobby_state_msg_s ugc_version");
+
+    struct client_connection_s
+    {
+        uint8_t pad_0000[0x4544];
+
+        int32_t server_command_sequence;
+
+        uint32_t pad_4548;
+
+        char reliable_commands[128][1024];
+
+        uint8_t pad_2454C[0x1234];
+    };
+
+    static_assert(sizeof(client_connection_s) == 0x25780, "client_connection_s stride");
+
+    static_assert(offsetof(client_connection_s, server_command_sequence) == 0x4544, "client_connection_s server_command_sequence");
+
+    static_assert(offsetof(client_connection_s, reliable_commands) == 0x454C, "client_connection_s reliable_commands");
 
     struct xasset_entry
     {
@@ -789,4 +855,50 @@ namespace engine
     typedef void*(__fastcall* steam_frame_callback_t)();
 
     inline steam_frame_callback_t steam_frame_callback_fn = nullptr;
+
+    typedef int64_t(__fastcall* apply_game_state_t)(uint32_t a1, int64_t a2, int64_t a3, int64_t message);
+
+    inline apply_game_state_t apply_game_state_fn = nullptr;
+
+    typedef int64_t(__fastcall* get_server_command_t)(uint32_t local_client, int32_t sequence);
+
+    inline get_server_command_t get_server_command_fn = nullptr;
+
+    typedef int64_t(__fastcall* cg_server_command_t)(uint32_t local_client);
+
+    inline cg_server_command_t cg_server_command_fn = nullptr;
+
+    typedef int64_t(__fastcall* set_config_string_t)(uint32_t local_client);
+
+    inline set_config_string_t set_config_string_fn = nullptr;
+
+    typedef char(__fastcall* bg_cache_checksum_t)(uint32_t controller, int64_t data);
+
+    inline bg_cache_checksum_t bg_cache_checksum_fn = nullptr;
+
+    typedef int64_t(__fastcall* play_video_t)(char* path, int64_t context, uint32_t flags, float speed, int64_t* callback, uint32_t video_id);
+
+    inline play_video_t play_video_fn = nullptr;
+
+    typedef int64_t(__fastcall* cinematic_open_t)(int64_t name, int64_t subtitle, uint32_t flags, float speed, void* callback, int video_id);
+
+    inline cinematic_open_t cinematic_open_fn = nullptr;
+
+    typedef int64_t(__fastcall* message_format_t)(uint32_t local_client, const char* message, int64_t context, char* out);
+
+    inline message_format_t message_format_fn = nullptr;
+
+    const char* server_command(uint32_t local_client, int32_t sequence);
+
+    int32_t server_command_sequence(uint32_t local_client);
+
+    const char* cmd_argv(int index);
+
+    uint32_t cmd_arg_int(const char* value);
+
+    int32_t cmd_atoi(const char* value);
+
+    bool configstring_pool_overflow(uint32_t index, const char* value);
+
+    size_t bcs_length();
 }

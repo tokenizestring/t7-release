@@ -2,6 +2,7 @@
 #include "../utils/mem/mem.hpp"
 
 #include <cstddef>
+#include <cstring>
 
 static_assert(offsetof(engine::xasset_entry, data) == 8, "xasset_entry.data");
 static_assert(offsetof(engine::xasset_entry, dead) == 19, "xasset_entry.dead");
@@ -317,6 +318,124 @@ namespace engine
         }
 
         return (*reinterpret_cast<int*>(module_base + client_conn_flags) & 2) != 0;
+    }
+
+    typedef const char*(__fastcall* cmd_argv_t)(int64_t index);
+
+    typedef uint32_t(__fastcall* cmd_string_to_int_t)(const char* value);
+
+    const char* cmd_argv(int index)
+    {
+        uintptr_t module_base = base();
+
+        if (module_base == 0)
+        {
+            return nullptr;
+        }
+
+        return reinterpret_cast<cmd_argv_t>(module_base + cmd_get_argv)(index);
+    }
+
+    uint32_t cmd_arg_int(const char* value)
+    {
+        uintptr_t module_base = base();
+
+        if (module_base == 0 || value == nullptr)
+        {
+            return 0;
+        }
+
+        return reinterpret_cast<cmd_string_to_int_t>(module_base + cmd_string_to_int)(value);
+    }
+
+    typedef int(__fastcall* string_atoi_t)(const char* value);
+
+    int32_t cmd_atoi(const char* value)
+    {
+        uintptr_t module_base = base();
+
+        if (module_base == 0 || value == nullptr)
+        {
+            return 0;
+        }
+
+        return reinterpret_cast<string_atoi_t>(module_base + cmd_string_atoi)(value);
+    }
+
+    bool configstring_pool_overflow(uint32_t index, const char* value)
+    {
+        uintptr_t module_base = base();
+
+        if (module_base == 0 || index > 3629)
+        {
+            return true;
+        }
+
+        const char* pool = reinterpret_cast<const char*>(module_base + configstring_pool);
+
+        const int32_t* offsets = reinterpret_cast<const int32_t*>(module_base + configstring_offsets);
+
+        int32_t pool_size = *reinterpret_cast<const int32_t*>(module_base + configstring_pool_size);
+
+        int new_length = value != nullptr ? static_cast<int>(strlen(value)) : 0;
+
+        int32_t offset = offsets[index];
+
+        int old_length = (offset > 0 && offset < 0x10000) ? static_cast<int>(strlen(pool + offset)) : 0;
+
+        int64_t projected = static_cast<int64_t>(pool_size) + new_length - old_length;
+
+        return projected >= 0x10000;
+    }
+
+    size_t bcs_length()
+    {
+        uintptr_t module_base = base();
+
+        if (module_base == 0)
+        {
+            return 0;
+        }
+
+        return strlen(reinterpret_cast<const char*>(module_base + bcs_buffer));
+    }
+
+    const char* server_command(uint32_t local_client, int32_t sequence)
+    {
+        uintptr_t module_base = base();
+
+        if (module_base == 0)
+        {
+            return nullptr;
+        }
+
+        client_connection_s* connections = *reinterpret_cast<client_connection_s**>(module_base + client_connection_ptr);
+
+        if (connections == nullptr)
+        {
+            return nullptr;
+        }
+
+        return connections[local_client].reliable_commands[sequence & 0x7F];
+    }
+
+    int32_t server_command_sequence(uint32_t local_client)
+    {
+        uintptr_t module_base = base();
+
+        if (module_base == 0)
+        {
+            return 0;
+        }
+
+        client_connection_s* connections = *reinterpret_cast<client_connection_s**>(module_base + client_connection_ptr);
+
+        if (connections == nullptr)
+        {
+            return 0;
+        }
+
+        return connections[local_client].server_command_sequence;
     }
 
     void** steam_readp2p_slot()

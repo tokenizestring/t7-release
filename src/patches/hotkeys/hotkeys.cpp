@@ -3,12 +3,11 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../video/video.hpp"
 
 namespace hotkeys
 {
     static bool disconnect_latch = false;
-
-    static bool disable_cutscenes = false;
 
     static bool disable_cutscenes_latch = false;
 
@@ -37,19 +36,14 @@ namespace hotkeys
         {
             disable_cutscenes_latch = true;
 
-            disable_cutscenes = !disable_cutscenes;
+            video::skip_cutscenes = !video::skip_cutscenes;
 
-            if (disable_cutscenes) T7_LOG(cx("hotkeys: F1 cutscenes DISABLED"));
+            if (video::skip_cutscenes) T7_LOG(cx("hotkeys: F1 cutscenes DISABLED"));
             else T7_LOG(cx("hotkeys: F1 cutscenes enabled"));
         }
         else if (!disable_down)
         {
             disable_cutscenes_latch = false;
-        }
-
-        if (disable_cutscenes && engine::is_connected() && engine::cinematic_playing())
-        {
-            engine::cinematic_stop_all();
         }
 
         return result;
