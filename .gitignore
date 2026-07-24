@@ -4,12 +4,6 @@ build/
 # generated at build time by tools/gen_proxy.ps1
 src/proxy/exports.g.h
 
-# vendored dependency - keep src + license, drop the rest
-lib/detours/samples/
-lib/detours/tests/
-lib/detours/vc/
-lib/detours/.github/
-
 # junk
 *.log
 *.user

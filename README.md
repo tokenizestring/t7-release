@@ -3,7 +3,7 @@
 A minimal internal DLL for Call of Duty: Black Ops III (T7), loaded as a `d3d11.dll`
 proxy. The focus is protection and quality-of-life: it hardens the client against the
 lobby/network crash exploits that plague BO3 and smooths out the worst of the engine's
-rough edges. No external dependencies beyond Microsoft Detours.
+rough edges. Zero external dependencies, including a from-scratch x64 inline-hook engine.
 
 ## Features
 
@@ -72,13 +72,16 @@ src/
   engine/            game offsets and typed wrappers
   patches/           one folder per feature module
   features/          non-patch features (logo)
-  utils/             crypt (string encryption), hook, log, mem, resource, exceptions
+  utils/             crypt (string encryption), hook (x64 inline-hook engine), log, mem, resource, exceptions
   proxy/             generated d3d11 export forwarders
-lib/detours/         Microsoft Detours (vendored, MIT)
 tools/               gen_proxy.ps1, deploy.ps1
 data/                embedded resources + crc patch blobs
 ```
 
-## Credits
+## Hook engine
 
-Hooking by [Microsoft Detours](https://github.com/microsoft/Detours) (MIT, see `lib/detours/LICENSE`).
+`utils/hook` is a self-contained x64 inline hooker — no third-party library. It length-
+decodes the target prologue, relocates the stolen bytes to a trampoline allocated within
+±2 GB (fixing RIP-relative operands and rel32 branches), and installs a 14-byte absolute
+jmp. `attach(&original, detour)` redirects the function and rewrites `original` to point
+at the trampoline; `detach(target)` restores the original bytes.

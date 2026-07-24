@@ -37,28 +37,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo compiling detours...
-
-cl.exe /nologo /O2 /std:c++17 /EHsc /MT /W3 /c ^
-    /DWIN32_LEAN_AND_MEAN ^
-    /I"lib\detours\src" ^
-    lib\detours\src\detours.cpp ^
-    lib\detours\src\modules.cpp ^
-    lib\detours\src\disasm.cpp ^
-    lib\detours\src\image.cpp ^
-    lib\detours\src\creatwth.cpp ^
-    /Fo"build\obj\\"
-
-if errorlevel 1 (
-    echo detours compile failed
-    exit /b 1
-)
-
 echo compiling...
 
 cl.exe /nologo /O2 /Gy /GR- /std:c++17 /EHsc /MT /W3 /LD ^
     /I"src" ^
-    /I"lib\detours\src" ^
     src\dllmain.cpp ^
     src\engine\engine.cpp ^
     src\patches\crc\crc.cpp ^
@@ -79,6 +61,7 @@ cl.exe /nologo /O2 /Gy /GR- /std:c++17 /EHsc /MT /W3 /LD ^
     src\patches\hotkeys\hotkeys.cpp ^
     src\features\logo\logo.cpp ^
     src\utils\hook\hook.cpp ^
+    src\utils\hook\lde.cpp ^
     src\utils\log\log.cpp ^
     src\utils\exceptions\exceptions.cpp ^
     src\utils\mem\mem.cpp ^
@@ -87,11 +70,6 @@ cl.exe /nologo /O2 /Gy /GR- /std:c++17 /EHsc /MT /W3 /LD ^
     /Fe"build\bin\t7-release.dll" ^
     /link /DLL /OPT:REF /OPT:ICF /OUT:"build\bin\t7-release.dll" ^
     build\obj\resources.res ^
-    build\obj\detours.obj ^
-    build\obj\modules.obj ^
-    build\obj\disasm.obj ^
-    build\obj\image.obj ^
-    build\obj\creatwth.obj ^
     ole32.lib ^
     dbghelp.lib ^
     user32.lib
