@@ -2,6 +2,7 @@
 
 #include "../stdafx.hpp"
 
+#include <cstddef>
 #include <d3d11.h>
 
 namespace engine
@@ -252,6 +253,19 @@ namespace engine
     };
 
 #pragma pack(push, 1)
+
+    struct client_data_s
+    {
+        uint8_t pad_0000[0x18];
+
+        uint32_t match_flags;
+
+        uint8_t pad_001C[0x342720 - 0x1C];
+    };
+
+    static_assert(sizeof(client_data_s) == 0x342720, "client_data_s stride");
+
+    static_assert(offsetof(client_data_s, match_flags) == 0x18, "client_data_s match_flags");
 
     struct xasset_entry
     {

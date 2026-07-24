@@ -4,10 +4,6 @@
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
 
-static constexpr size_t client_data_stride = 0x342720;
-
-static constexpr size_t matchflags_offset = 0x18;
-
 namespace antiquit
 {
     void initialize()
@@ -56,9 +52,9 @@ namespace antiquit
             return;
         }
 
-        uintptr_t client_data = data_base + client_data_stride * static_cast<size_t>(local);
+        engine::client_data_s* clients = reinterpret_cast<engine::client_data_s*>(data_base);
 
-        volatile uint32_t* flags = reinterpret_cast<volatile uint32_t*>(client_data + matchflags_offset);
+        volatile uint32_t* flags = reinterpret_cast<volatile uint32_t*>(&clients[local].match_flags);
 
         if (*flags != 0)
         {
