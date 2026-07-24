@@ -19,8 +19,18 @@ connection traffic in real time.
 Every string in the binary is RC4-encrypted at compile time (per-string unique key), so
 the strings view of a dumped build is empty.
 
+**Server-command RCE / kick guards** (`servercmd`)
+
+Every host→client server command is validated before the game processes it (and logged for review):
+
+- `/` command — clamps the entity index; the game had none, so an out-of-range index read a pointer out of bounds and **wrote through it** = remote code execution.
+- `7` command — clamps the team/entity indices to stop a remote out-of-bounds write.
+- message commands (`)` `<` `;` `O`) — routes the formatter through a large scratch buffer to stop a `[{...}]`-token stack overflow.
+- kick immunity — neutralizes the host-triggered forced-disconnects: bad configstring index, 64 KB configstring-pool overflow, big-configstring reassembly overflow, reliable-sequence cycle-out, and the BG-cache checksum mismatch (configstring 3241).
+
 **Crash / exploit guards**
 
+- `workshop` — drops host-forced Steam Workshop UGC, killing the phantom-DLL sideload RCE (a mod shipping `RzChromaSDK64.dll` / `atiadlxx.dll` that loads onto everyone in the lobby).
 - `demonware` — drops malicious demonware + Steam-P2P instant messages (remote popup / remote cbuf).
 - `oob` — filters connectionless out-of-band commands (rcon, mstart, relay, ...).
 - `lobbymsg` — bounds-checks and validates lobby message deserialization (array overflow, spoofed sender, voice-packet OOB, forged kicks).
@@ -35,9 +45,11 @@ the strings view of a dumped build is empty.
 
 - `infoleak` — blocks raw-UDP to non-host endpoints and nulls Steam rich presence, so your IP isn't handed out to the lobby.
 - `presence` — hides your rich presence from non-friends.
+- `video` — blocks host-forced `http://` / `https://` video loads (IP-leak deanon + a remote video-decoder attack surface).
 
 **Quality of life**
 
+- `video` — F1 skips in-game cutscenes (hooks the cinematic loader so they never start; menu backgrounds are untouched).
 - `steamqol` — caches DLC/app install queries and throttles the friend-list rebuild, killing the Steam-IPC menu FPS hitches.
 - `antiquit` — clears the forced menu-block branch.
 - `logo` — animated frontend banner from an embedded resource.
@@ -63,9 +75,10 @@ Requires Visual Studio with the C++ x64 toolchain.
 build.bat
 ```
 
-The script sets up `vcvars64`, generates the proxy export forwarders, compiles Detours,
-compiles the DLL, and writes `build\bin\t7-release.dll`. On success it auto-deploys to
-your Black Ops III install (located via the Steam registry) as `d3d11.dll`.
+The script sets up `vcvars64`, generates the proxy export forwarders, compiles the DLL
+(with the in-house hook engine — no third-party libraries), and writes
+`build\bin\t7-release.dll`. On success it auto-deploys to your Black Ops III install
+(located via the Steam registry) as `d3d11.dll`.
 
 ## Install
 
