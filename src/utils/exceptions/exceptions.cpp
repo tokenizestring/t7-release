@@ -1,8 +1,10 @@
 #include "exceptions.hpp"
 #include "../log/log.hpp"
+#include "../crypt/crypt.hpp"
 
 #include <sstream>
 #include <iomanip>
+#include <cstdio>
 #include <DbgHelp.h>
 
 #pragma comment(lib, "dbghelp.lib")
@@ -10,6 +12,29 @@
 static HMODULE game_module = nullptr;
 static uintptr_t game_base = 0;
 static uintptr_t game_end = 0;
+
+static std::ofstream exception_file;
+
+static void emit(const std::string& line)
+{
+    if (exception_file.is_open())
+    {
+        exception_file << line << std::endl;
+    }
+}
+
+static std::string stamp()
+{
+    SYSTEMTIME t;
+
+    GetLocalTime(&t);
+
+    char buffer[40];
+
+    snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d_%02d-%02d-%02d-%03d", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+
+    return buffer;
+}
 
 static bool is_game_address(uintptr_t addr)
 {
@@ -47,19 +72,19 @@ static const char* code_name(DWORD code)
 
 static void dump_registers(CONTEXT* ctx)
 {
-    utils::log::write("  rax=" + to_hex(ctx->Rax) + " rbx=" + to_hex(ctx->Rbx) + " rcx=" + to_hex(ctx->Rcx));
+    emit("  rax=" + to_hex(ctx->Rax) + " rbx=" + to_hex(ctx->Rbx) + " rcx=" + to_hex(ctx->Rcx));
 
-    utils::log::write("  rdx=" + to_hex(ctx->Rdx) + " rsi=" + to_hex(ctx->Rsi) + " rdi=" + to_hex(ctx->Rdi));
+    emit("  rdx=" + to_hex(ctx->Rdx) + " rsi=" + to_hex(ctx->Rsi) + " rdi=" + to_hex(ctx->Rdi));
 
-    utils::log::write("  rsp=" + to_hex(ctx->Rsp) + " rbp=" + to_hex(ctx->Rbp));
+    emit("  rsp=" + to_hex(ctx->Rsp) + " rbp=" + to_hex(ctx->Rbp));
 
-    utils::log::write("  r8=" + to_hex(ctx->R8) + " r9=" + to_hex(ctx->R9) + " r10=" + to_hex(ctx->R10));
+    emit("  r8=" + to_hex(ctx->R8) + " r9=" + to_hex(ctx->R9) + " r10=" + to_hex(ctx->R10));
 
-    utils::log::write("  r11=" + to_hex(ctx->R11) + " r12=" + to_hex(ctx->R12) + " r13=" + to_hex(ctx->R13));
+    emit("  r11=" + to_hex(ctx->R11) + " r12=" + to_hex(ctx->R12) + " r13=" + to_hex(ctx->R13));
 
-    utils::log::write("  r14=" + to_hex(ctx->R14) + " r15=" + to_hex(ctx->R15));
+    emit("  r14=" + to_hex(ctx->R14) + " r15=" + to_hex(ctx->R15));
 
-    utils::log::write("  rip=" + to_hex(ctx->Rip));
+    emit("  rip=" + to_hex(ctx->Rip));
 }
 
 static void dump_stack(CONTEXT* ctx)
@@ -75,7 +100,7 @@ static void dump_stack(CONTEXT* ctx)
 
     CONTEXT ctx_copy = *ctx;
 
-    utils::log::write("  stack:");
+    emit("  stack:");
 
     for (int i = 0; i < 16; i++)
     {
@@ -93,7 +118,7 @@ static void dump_stack(CONTEXT* ctx)
 
         if (is_game_address(addr))
         {
-            utils::log::write("    [" + std::to_string(i) + "] game+" + to_hex(addr - game_base));
+            emit("    [" + std::to_string(i) + "] game+" + to_hex(addr - game_base));
         }
         else
         {
@@ -116,11 +141,11 @@ static void dump_stack(CONTEXT* ctx)
                     name = name.substr(slash + 1);
                 }
 
-                utils::log::write("    [" + std::to_string(i) + "] " + name + "+" + to_hex(addr - reinterpret_cast<uintptr_t>(mod)));
+                emit("    [" + std::to_string(i) + "] " + name + "+" + to_hex(addr - reinterpret_cast<uintptr_t>(mod)));
             }
             else
             {
-                utils::log::write("    [" + std::to_string(i) + "] " + to_hex(addr));
+                emit("    [" + std::to_string(i) + "] " + to_hex(addr));
             }
         }
     }
@@ -142,17 +167,27 @@ static LONG WINAPI handler(EXCEPTION_POINTERS* info)
 
     uintptr_t fault_addr = reinterpret_cast<uintptr_t>(info->ExceptionRecord->ExceptionAddress);
 
-    utils::log::write("--- EXCEPTION ---");
+    std::filesystem::path directory = utils::log::root_directory() / cx("exceptions").c_str();
 
-    utils::log::write("  code: " + std::string(code_name(code)) + " (" + to_hex(code) + ")");
+    std::error_code ec;
+
+    std::filesystem::create_directories(directory, ec);
+
+    std::string name = std::string(cx("exception-")) + stamp() + cx(".txt");
+
+    exception_file.open((directory / name).string(), std::ios::out | std::ios::trunc);
+
+    emit("--- EXCEPTION ---");
+
+    emit("  code: " + std::string(code_name(code)) + " (" + to_hex(code) + ")");
 
     if (is_game_address(fault_addr))
     {
-        utils::log::write("  address: game+" + to_hex(fault_addr - game_base));
+        emit("  address: game+" + to_hex(fault_addr - game_base));
     }
     else
     {
-        utils::log::write("  address: " + to_hex(fault_addr));
+        emit("  address: " + to_hex(fault_addr));
     }
 
     if (code == EXCEPTION_ACCESS_VIOLATION && info->ExceptionRecord->NumberParameters >= 2)
@@ -162,14 +197,18 @@ static LONG WINAPI handler(EXCEPTION_POINTERS* info)
 
         const char* op = (type == 0) ? "read" : (type == 1) ? "write" : "execute";
 
-        utils::log::write("  " + std::string(op) + " at " + to_hex(target));
+        emit("  " + std::string(op) + " at " + to_hex(target));
     }
 
     dump_registers(info->ContextRecord);
 
     dump_stack(info->ContextRecord);
 
-    utils::log::write("--- END EXCEPTION ---");
+    emit("--- END EXCEPTION ---");
+
+    exception_file.close();
+
+    utils::log::write(std::string(cx("exception: ")) + code_name(code) + cx(" logged to exceptions/") + name);
 
     return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -190,6 +229,6 @@ namespace utils::exceptions
 
         AddVectoredExceptionHandler(1, handler);
 
-        utils::log::write("exceptions: installed (game " + to_hex(game_base) + " - " + to_hex(game_end) + ")");
+        utils::log::write(std::string(cx("exceptions: installed (game ")) + to_hex(game_base) + cx(" - ") + to_hex(game_end) + ")");
     }
 }

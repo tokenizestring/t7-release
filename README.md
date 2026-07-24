@@ -73,6 +73,20 @@ Drop the built `d3d11.dll` next to `BlackOps3.exe` in your game directory. The g
 it from its own folder before the system copy; the proxy forwards every real `d3d11`
 export on to `C:\Windows\System32\d3d11.dll`, so rendering is unaffected.
 
+At runtime it writes to a `t7-rework` folder next to the game:
+
+```
+t7-rework/
+  logs/            t7-release.log (startup + per-frame activity)
+  exceptions/      exception-<date>.txt (one file per fault)
+```
+
+## Reporting crashes
+
+If the DLL faults it drops a full dump — code, faulting address, registers, and a
+stack walk — into `t7-rework/exceptions/exception-<date>.txt`. **Please post that file
+in the Discord so it can be reviewed and fixed:** https://discord.gg/WWKZsCCesT
+
 ## Layout
 
 ```

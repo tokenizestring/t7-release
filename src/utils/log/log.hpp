@@ -7,6 +7,8 @@ namespace utils::log
     void initialize();
 
     void write(const std::string& message);
+
+    std::filesystem::path root_directory();
 }
 
 #ifdef T7_NO_LOG
