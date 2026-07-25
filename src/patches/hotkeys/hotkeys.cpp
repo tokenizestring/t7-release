@@ -4,6 +4,7 @@
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
 #include "../video/video.hpp"
+#include "../lua/lua.hpp"
 
 namespace hotkeys
 {
@@ -15,6 +16,8 @@ namespace hotkeys
     {
         void* result = engine::steam_frame_callback_fn();
 
+        lua::tick();
+
         bool disconnect_down = (GetAsyncKeyState(VK_F2) & 0x8000) != 0;
 
         if (disconnect_down && !disconnect_latch)
@@ -23,7 +26,7 @@ namespace hotkeys
 
             engine::cl_disconnect();
 
-            T7_LOG(cx("hotkeys: F2 disconnect"));
+            T7_LOG(cx("hotkeys: F2 disconnect."));
         }
         else if (!disconnect_down)
         {
@@ -38,8 +41,8 @@ namespace hotkeys
 
             video::skip_cutscenes = !video::skip_cutscenes;
 
-            if (video::skip_cutscenes) T7_LOG(cx("hotkeys: F1 cutscenes DISABLED"));
-            else T7_LOG(cx("hotkeys: F1 cutscenes enabled"));
+            if (video::skip_cutscenes) T7_LOG(cx("hotkeys: F1 cutscenes DISABLED."));
+            else T7_LOG(cx("hotkeys: F1 cutscenes enabled."));
         }
         else if (!disable_down)
         {
@@ -55,6 +58,6 @@ namespace hotkeys
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::steam_frame_callback_fn), hk_frame_callback);
 
-        T7_LOG(cx("hotkeys: F1 toggle disable cutscenes, F2 disconnect (main-thread frame hook)"));
+        T7_LOG(cx("hotkeys: F1 toggle disable cutscenes, F2 disconnect (main-thread frame hook)."));
     }
 }

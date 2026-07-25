@@ -8,9 +8,13 @@
 
 namespace workshop
 {
+    static bool block_enabled = true;
+
+    static bool toggle_latch = false;
+
     static int64_t __fastcall hk_apply_game_state(uint32_t a1, int64_t a2, int64_t a3, int64_t message)
     {
-        if (message != 0)
+        if (block_enabled && message != 0)
         {
             engine::lobby_state_msg_s* state = reinterpret_cast<engine::lobby_state_msg_s*>(message);
 
@@ -20,7 +24,7 @@ namespace workshop
 
                 memcpy(name, state->ugc_name, sizeof(state->ugc_name));
 
-                T7_LOG(std::string(cx("workshop: blocked host-forced ugc '")) + name + cx("'"));
+                T7_LOG(std::string(cx("workshop: host-forced ugc '")) + name + cx("', dropped."));
 
                 memset(state->ugc_name, 0, sizeof(state->ugc_name));
 
@@ -37,6 +41,25 @@ namespace workshop
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::apply_game_state_fn), hk_apply_game_state);
 
-        T7_LOG(cx("workshop: host-forced ugc guard installed"));
+        T7_LOG(cx("workshop: host-forced ugc protection installed (F6 toggles)."));
+    }
+
+    void tick()
+    {
+        bool down = (GetAsyncKeyState(VK_F6) & 0x8000) != 0;
+
+        if (down && !toggle_latch)
+        {
+            toggle_latch = true;
+
+            block_enabled = !block_enabled;
+
+            if (block_enabled) T7_LOG(cx("workshop: enabled - host-forced ugc blocked."));
+            else T7_LOG(cx("workshop: disabled - host-forced ugc allowed."));
+        }
+        else if (!down)
+        {
+            toggle_latch = false;
+        }
     }
 }

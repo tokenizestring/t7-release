@@ -23,7 +23,7 @@ static char* __fastcall hk_paragon_icon_name(uint32_t mode, int icon_id)
 
     if (blocked_count == 1 || blocked_count % 300 == 0)
     {
-        T7_LOG(std::string(cx("paragon: blocked malformed paragon-icon lookup (x")) + std::to_string(blocked_count) + cx("), scoreboard crash averted"));
+        T7_LOG(std::string(cx("paragon: malformed paragon-icon lookup (x")) + std::to_string(blocked_count) + cx("), dropped."));
     }
 
     return reinterpret_cast<char*>(&safe_entry);
@@ -39,6 +39,6 @@ namespace paragon
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::paragon_icon_name_fn), hk_paragon_icon_name);
 
-        T7_LOG(cx("paragon: paragon-icon crash guard installed"));
+        T7_LOG(cx("paragon: paragon-icon crash protection installed."));
     }
 }

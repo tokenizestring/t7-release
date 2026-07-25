@@ -1,8 +1,6 @@
 #pragma once
 
-namespace workshop
+namespace perf
 {
     void initialize();
-
-    void tick();
 }

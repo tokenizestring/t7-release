@@ -19,7 +19,7 @@ namespace antiquit
 
         utils::mem::patch(reinterpret_cast<void*>(base + engine::menu_blocked_jnz), nops, sizeof(nops));
 
-        T7_LOG(cx("antiquit: patched menu-block branch"));
+        T7_LOG(cx("antiquit: patched menu-block branch."));
     }
 
     void tick() 

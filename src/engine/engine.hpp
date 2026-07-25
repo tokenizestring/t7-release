@@ -97,6 +97,10 @@ namespace engine
 
         lobby_handle_packet_internal = 0x1EEBF20,
 
+        lobby_print_debug = 0x1EEA680,
+
+        lobby_print_message = 0x1EEA940,
+
         lobby_prep_read = 0x1EEA520,
 
         lobby_type_name_fn = 0x1EDFA60,
@@ -210,6 +214,20 @@ namespace engine
         client_conn_flags = 0x5359BC0,
 
         steam_frame_callback = 0x1EA4070,
+
+        frame_fps_cap = 0xF7CFD0,
+
+        lua_get_vm = 0x1F05920,
+
+        lua_run = 0x1EF8F50,
+
+        lua_load_file = 0x1D46F00,
+
+        lua_loadbuffer = 0x1D3F9B0,
+
+        netchan_reassemble = 0x211C570,
+
+        netchan_msg_table = 0x16DEAEB0,
     };
 
     enum class asset_type : uint32_t
@@ -303,10 +321,6 @@ namespace engine
         uint8_t pad_001C[0x342720 - 0x1C];
     };
 
-    static_assert(sizeof(client_data_s) == 0x342720, "client_data_s stride");
-
-    static_assert(offsetof(client_data_s, match_flags) == 0x18, "client_data_s match_flags");
-
     struct lobby_state_msg_s
     {
         uint8_t pad_0000[0x53A0];
@@ -315,10 +329,6 @@ namespace engine
 
         uint32_t ugc_version;
     };
-
-    static_assert(offsetof(lobby_state_msg_s, ugc_name) == 21408, "lobby_state_msg_s ugc_name");
-
-    static_assert(offsetof(lobby_state_msg_s, ugc_version) == 21440, "lobby_state_msg_s ugc_version");
 
     struct client_connection_s
     {
@@ -332,12 +342,6 @@ namespace engine
 
         uint8_t pad_2454C[0x1234];
     };
-
-    static_assert(sizeof(client_connection_s) == 0x25780, "client_connection_s stride");
-
-    static_assert(offsetof(client_connection_s, server_command_sequence) == 0x4544, "client_connection_s server_command_sequence");
-
-    static_assert(offsetof(client_connection_s, reliable_commands) == 0x454C, "client_connection_s reliable_commands");
 
     struct xasset_entry
     {
@@ -706,6 +710,14 @@ namespace engine
 
     typedef int64_t(__fastcall* handle_packet_internal_t)(uint32_t controller_index, void* adr, uint64_t xuid, int64_t lobby_type, int role, void* msg);
 
+    typedef int64_t(__fastcall* lobby_print_debug_t)(int64_t msg);
+
+    inline lobby_print_debug_t lobby_print_debug_fn = nullptr;
+
+    typedef char(__fastcall* lobby_print_message_t)(int64_t msg, char force);
+
+    inline lobby_print_message_t lobby_print_message_fn = nullptr;
+
     typedef bool(__fastcall* lobby_prep_read_msg_t)(lobby_msg_s* lobby_msg, void* msg);
 
     typedef const char*(__fastcall* lobby_type_name_t)(uint32_t type);
@@ -903,6 +915,92 @@ namespace engine
     typedef int64_t(__fastcall* message_format_t)(uint32_t local_client, const char* message, int64_t context, char* out);
 
     inline message_format_t message_format_fn = nullptr;
+
+    typedef char(__fastcall* netchan_reassemble_t)(int32_t client, int64_t channel, int64_t message, void* out_msgid, void* out_src, void* out_seq);
+
+    inline netchan_reassemble_t netchan_reassemble_fn = nullptr;
+
+    typedef int64_t(__fastcall* fps_cap_t)(uint32_t local_client);
+
+    inline fps_cap_t fps_cap_fn = nullptr;
+
+    typedef int64_t(__fastcall* lua_get_vm_t)(int index);
+
+    inline lua_get_vm_t lua_get_vm_fn = nullptr;
+
+    typedef int(__fastcall* lua_loadbuffer_t)(int64_t state, int64_t scratch, const char* buffer, uint64_t size, const char* name);
+
+    inline lua_loadbuffer_t lua_loadbuffer_fn = nullptr;
+
+    typedef char(__fastcall* lua_run_t)(int64_t vm, const char* name);
+
+    inline lua_run_t lua_run_fn = nullptr;
+
+    typedef int64_t(__fastcall* lua_load_file_t)(int64_t vm, const char* name);
+
+    inline lua_load_file_t lua_load_file_fn = nullptr;
+
+    static constexpr size_t netchan_msg_client_max = 18;
+
+    static constexpr size_t netchan_msg_channel_max = 18;
+
+    static constexpr size_t netchan_msg_entry_stride = 37;
+
+    static constexpr size_t netchan_msg_complete_flag = 1;
+
+    static constexpr size_t netchan_msg_bucket_next = 64;
+
+    static constexpr size_t netchan_msg_fragment_head = 72;
+
+    static constexpr size_t netchan_fragment_length = 8;
+
+    static constexpr size_t netchan_fragment_index = 12;
+
+    static constexpr size_t netchan_reassemble_stride = 1222;
+
+    static constexpr size_t netchan_msgbuf_error = 0;
+
+    static constexpr size_t netchan_msgbuf_capacity = 24;
+
+    static constexpr size_t netchan_msgbuf_written = 28;
+
+    static constexpr uint32_t serverpos_index_max = 1792;
+
+    static constexpr uint32_t configstring_index_max = 3629;
+
+    static constexpr size_t bcs_reassembly_max = 20480;
+
+    static constexpr uint32_t model_notify_numargs_max = 16;
+
+    static constexpr uint32_t model_notify_window_ms = 250;
+
+    static constexpr uint32_t model_notify_window_max = 40;
+
+    inline uint32_t model_notify_window_start = 0;
+
+    inline uint32_t model_notify_count = 0;
+
+    static constexpr int lobby_print_max_depth = 32;
+
+    inline int lobby_print_depth = 0;
+
+    inline uint64_t lobby_print_blocked = 0;
+
+    static constexpr int lua_ui_vm = 0;
+
+    static constexpr int64_t lua_inner_state_offset = 16;
+
+    static constexpr int64_t lua_load_scratch_offset = 1384;
+
+    static constexpr int max_reliable_commands = 128;
+
+    static constexpr uint64_t loopback_xuid = 0xDEADFA11ull;
+
+    static constexpr size_t client_data_stride = 938352;
+
+    static constexpr size_t client_netadr_offset = 44;
+
+    static constexpr uint32_t max_userdata_size = 1024;
 
     const char* server_command(uint32_t local_client, int32_t sequence);
 

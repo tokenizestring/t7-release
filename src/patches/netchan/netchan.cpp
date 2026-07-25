@@ -10,14 +10,6 @@
 
 namespace netchan
 {
-    static const int max_reliable_commands = 128;
-
-    static const uint64_t loopback_xuid = 0xDEADFA11ull;
-
-    static const size_t client_stride = 938352;
-
-    static const size_t client_netadr_offset = 44;
-
     static bool block_enabled = false;
 
     static bool toggle_latch = false;
@@ -35,7 +27,7 @@ namespace netchan
 
         if (block_enabled && adr != nullptr && adr->type == engine::netadr_type_raw_udp)
         {
-            T7_LOG(std::string(cx("netchan: send ")) + std::to_string(length) + cx("b to ") + adr_string(adr) + cx(" failed to send."));
+            T7_LOG(std::string(cx("netchan: send ")) + std::to_string(length) + cx("b to ") + adr_string(adr) + cx(" dropped."));
 
             return true;
         }
@@ -75,7 +67,7 @@ namespace netchan
             }
         }
 
-        int client_num = xuid == loopback_xuid ? 0 : reinterpret_cast<engine::sv_client_num_for_xuid_t>(base + engine::sv_client_num_for_xuid)(xuid);
+        int client_num = xuid == engine::loopback_xuid ? 0 : reinterpret_cast<engine::sv_client_num_for_xuid_t>(base + engine::sv_client_num_for_xuid)(xuid);
 
         if (client_num >= 0)
         {
@@ -83,7 +75,7 @@ namespace netchan
 
             if (clients != 0)
             {
-                void* stored = reinterpret_cast<void*>(clients + client_stride * static_cast<size_t>(client_num) + client_netadr_offset);
+                void* stored = reinterpret_cast<void*>(clients + engine::client_data_stride * static_cast<size_t>(client_num) + engine::client_netadr_offset);
 
                 if (reinterpret_cast<engine::net_compare_base_adr_t>(base + engine::net_compare_base_adr)(from, stored) == 0)
                 {
@@ -109,13 +101,13 @@ namespace netchan
             {
                 client[5133] = reliable_sequence;
 
-                T7_LOG(std::string(cx("netchan: bad reliable ack ")) + std::to_string(reliable_acknowledge) + cx(" seq ") + std::to_string(reliable_sequence) + cx(" clamped"));
+                T7_LOG(std::string(cx("netchan: bad reliable ack ")) + std::to_string(reliable_acknowledge) + cx(" seq ") + std::to_string(reliable_sequence) + cx(", ignored."));
             }
-            else if (reliable_acknowledge < reliable_sequence - max_reliable_commands)
+            else if (reliable_acknowledge < reliable_sequence - engine::max_reliable_commands)
             {
-                client[5133] = reliable_sequence - max_reliable_commands;
+                client[5133] = reliable_sequence - engine::max_reliable_commands;
 
-                T7_LOG(std::string(cx("netchan: stale reliable ack ")) + std::to_string(reliable_acknowledge) + cx(" seq ") + std::to_string(reliable_sequence) + cx(" capped"));
+                T7_LOG(std::string(cx("netchan: stale reliable ack ")) + std::to_string(reliable_acknowledge) + cx(" seq ") + std::to_string(reliable_sequence) + cx(", ignored."));
             }
         }
 
@@ -136,7 +128,7 @@ namespace netchan
 
         if (invalid)
         {
-            T7_LOG(std::string(cx("netchan: gamedata crash blocked server_id=")) + std::to_string(server_id) + cx(" cs=\"") + std::string(config_string) + "\"");
+            T7_LOG(std::string(cx("netchan: gamedata server_id=")) + std::to_string(server_id) + cx(" cs=\"") + std::string(config_string) + cx("\", dropped."));
 
             return 0;
         }
@@ -144,7 +136,56 @@ namespace netchan
         return engine::cl_parse_gamestate_fn(local_client, msg, a3, a4);
     }
 
-    static const int max_userdata_size = 1024;
+    static uint64_t reassemble_blocked = 0;
+
+    static char __fastcall hk_netchan_reassemble(int32_t client, int64_t channel, int64_t message, void* out_msgid, void* out_src, void* out_seq)
+    {
+        int32_t chan = static_cast<int32_t>(channel);
+
+        if (message != 0 && client >= 0 && client < engine::netchan_msg_client_max && chan >= 0 && chan < engine::netchan_msg_channel_max)
+        {
+            uint64_t* table = reinterpret_cast<uint64_t*>(engine::base() + engine::netchan_msg_table);
+
+            uintptr_t entry = table[engine::netchan_msg_entry_stride * client + chan];
+
+            while (entry != 0 && *reinterpret_cast<uint8_t*>(entry + engine::netchan_msg_complete_flag) == 0)
+            {
+                entry = *reinterpret_cast<uintptr_t*>(entry + engine::netchan_msg_bucket_next);
+            }
+
+            if (entry != 0)
+            {
+                uint32_t capacity = *reinterpret_cast<uint32_t*>(message + engine::netchan_msgbuf_capacity);
+
+                uintptr_t node = *reinterpret_cast<uintptr_t*>(entry + engine::netchan_msg_fragment_head);
+
+                while (node != 0)
+                {
+                    uint32_t index = *reinterpret_cast<uint8_t*>(node + engine::netchan_fragment_index);
+
+                    uint32_t length = *reinterpret_cast<uint32_t*>(node + engine::netchan_fragment_length);
+
+                    if (engine::netchan_reassemble_stride * index + length > capacity)
+                    {
+                        *reinterpret_cast<uint32_t*>(message + engine::netchan_msgbuf_error) = 1;
+
+                        *reinterpret_cast<uint32_t*>(message + engine::netchan_msgbuf_written) = 0;
+
+                        if (reassemble_blocked++ % 64 == 0)
+                        {
+                            T7_LOG(std::string(cx("netchan: oob reassembly client ")) + std::to_string(client) + cx(" channel ") + std::to_string(chan) + cx(" frag ") + std::to_string(index) + cx(" len ") + std::to_string(length) + cx(" cap ") + std::to_string(capacity) + cx(", dropped."));
+                        }
+
+                        return 0;
+                    }
+
+                    node = *reinterpret_cast<uintptr_t*>(node);
+                }
+            }
+        }
+
+        return engine::netchan_reassemble_fn(client, channel, message, out_msgid, out_src, out_seq);
+    }
 
     static char __fastcall hk_live_userdata_store(void* table, int64_t a2, int type, int64_t data, int64_t a5)
     {
@@ -152,9 +193,9 @@ namespace netchan
         {
             uint32_t size = *reinterpret_cast<uint32_t*>(data + 4);
 
-            if (size > max_userdata_size)
+            if (size > engine::max_userdata_size)
             {
-                T7_LOG(std::string(cx("netchan: oversized live userdata ")) + std::to_string(size) + cx(" dropped"));
+                T7_LOG(std::string(cx("netchan: oversized live userdata ")) + std::to_string(size) + cx(", dropped."));
 
                 return 1;
             }
@@ -189,7 +230,11 @@ namespace netchan
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::net_get_packet_fn), hk_net_get_packet);
 
-        T7_LOG(cx("netchan: gamestate + reliable + spoof guards installed, udp block ready (F7 toggles, default off)"));
+        engine::netchan_reassemble_fn = reinterpret_cast<engine::netchan_reassemble_t>(engine::base() + engine::netchan_reassemble);
+
+        utils::hook::attach(reinterpret_cast<void**>(&engine::netchan_reassemble_fn), hk_netchan_reassemble);
+
+        T7_LOG(cx("netchan: gamestate + reliable + spoof + reassembly-oob protections installed, udp block ready (F7 toggles, default off)."));
     }
 
     void tick()
@@ -202,8 +247,8 @@ namespace netchan
 
             block_enabled = !block_enabled;
 
-            if (block_enabled) T7_LOG(cx("netchan: enabled - raw udp blocked (breaks dedi / direct connect)"));
-            else T7_LOG(cx("netchan: disabled - raw udp restored"));
+            if (block_enabled) T7_LOG(cx("netchan: enabled - raw udp blocked (breaks dedi / direct connect)."));
+            else T7_LOG(cx("netchan: disabled - raw udp restored."));
         }
         else if (!down)
         {

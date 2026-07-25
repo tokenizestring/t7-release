@@ -58,6 +58,6 @@ namespace inventory
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::bg_is_item_purchased_fn), hk_is_item_purchased);
 
-        T7_LOG(cx("inventory: unlock hooks installed"));
+        T7_LOG(cx("inventory: unlock hooks installed."));
     }
 }

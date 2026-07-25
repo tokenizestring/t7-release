@@ -63,7 +63,7 @@ namespace lobbymsg
         {
             if (cap.count == cap.limit + 1)
             {
-                T7_LOG(std::string(cx("lobbymsg: array overflow blocked (")) + (cap.key != nullptr ? cap.key : "?") + cx(" capped at ") + std::to_string(cap.limit) + ")");
+                T7_LOG(std::string(cx("lobbymsg: array overflow (")) + (cap.key != nullptr ? cap.key : "?") + cx(" capped at ") + std::to_string(cap.limit) + cx("), dropped."));
             }
 
             return 0;
@@ -76,7 +76,7 @@ namespace lobbymsg
     {
         if (static_cast<uint32_t>(lobby_type) > 1)
         {
-            T7_LOG(std::string(cx("lobbymsg: crash blocked (lobbytype ")) + std::to_string(lobby_type) + ")");
+            T7_LOG(std::string(cx("lobbymsg: bad lobbytype ")) + std::to_string(lobby_type) + cx(", dropped."));
 
             return false;
         }
@@ -106,7 +106,7 @@ namespace lobbymsg
 
         if (claimed_xuid != sender_xuid)
         {
-            T7_LOG(std::string(cx("lobbymsg: spoof blocked (sender ")) + std::to_string(sender_xuid) + cx(" claimed ") + std::to_string(claimed_xuid) + ")");
+            T7_LOG(std::string(cx("lobbymsg: spoofed sender ")) + std::to_string(sender_xuid) + cx(" claimed ") + std::to_string(claimed_xuid) + cx(", dropped."));
 
             return false;
         }
@@ -140,7 +140,7 @@ namespace lobbymsg
 
         if (voice_size > voice_data_max)
         {
-            T7_LOG(std::string(cx("lobbymsg: voice_packet dropped (voicesize ")) + std::to_string(voice_size) + ")");
+            T7_LOG(std::string(cx("lobbymsg: voice_packet voicesize ")) + std::to_string(voice_size) + cx(", dropped."));
 
             return false;
         }
@@ -151,7 +151,7 @@ namespace lobbymsg
         {
             if (offset >= voice_size)
             {
-                T7_LOG(std::string(cx("lobbymsg: voice_packet oob blocked (offset ")) + std::to_string(offset) + cx(" size ") + std::to_string(voice_size) + ")");
+                T7_LOG(std::string(cx("lobbymsg: voice_packet oob offset ")) + std::to_string(offset) + cx(" size ") + std::to_string(voice_size) + cx(", dropped."));
 
                 return false;
             }
@@ -160,7 +160,7 @@ namespace lobbymsg
 
             if (offset + length > voice_size)
             {
-                T7_LOG(std::string(cx("lobbymsg: voice_packet oob blocked (end ")) + std::to_string(offset + length) + cx(" size ") + std::to_string(voice_size) + ")");
+                T7_LOG(std::string(cx("lobbymsg: voice_packet oob end ")) + std::to_string(offset + length) + cx(" size ") + std::to_string(voice_size) + cx(", dropped."));
 
                 return false;
             }
@@ -229,7 +229,7 @@ namespace lobbymsg
 
             if (disc_xuid != sender_xuid)
             {
-                T7_LOG(std::string(cx("lobbymsg: reliable_data kick blocked (")) + std::to_string(sender_xuid) + cx(" spoofed ") + std::to_string(disc_xuid) + ")");
+                T7_LOG(std::string(cx("lobbymsg: reliable_data ")) + std::to_string(sender_xuid) + cx(" spoofed ") + std::to_string(disc_xuid) + cx(", dropped."));
 
                 return false;
             }
@@ -248,7 +248,7 @@ namespace lobbymsg
 
         const char* name = type < engine::message_type_count ? engine::lobby_type_name(type) : nullptr;
 
-        T7_LOG(std::string(cx("lobbymsg: ")) + (name != nullptr ? name : cx("unknown")) + " (" + std::to_string(static_cast<uint32_t>(type)) + cx(") from ") + std::to_string(xuid));
+        T7_LOG(std::string(cx("lobbymsg: ")) + (name != nullptr ? name : cx("unknown")) + " (" + std::to_string(static_cast<uint32_t>(type)) + cx(") from ") + std::to_string(xuid) + cx("."));
 
         switch (type)
         {
@@ -310,7 +310,7 @@ namespace lobbymsg
             {
                 if (!lobby_join_active())
                 {
-                    T7_LOG(std::string(cx("lobbymsg: pull blocked (not joining, from ")) + std::to_string(xuid) + ")");
+                    T7_LOG(std::string(cx("lobbymsg: pull not joining from ")) + std::to_string(xuid) + cx(", dropped."));
 
                     return 0;
                 }
@@ -319,6 +319,39 @@ namespace lobbymsg
         }
 
         return engine::handle_packet_internal(controller_index, adr, xuid, lobby_type, role, msg);
+    }
+
+    static int64_t __fastcall hk_lobby_print_debug(int64_t msg)
+    {
+        if (engine::lobby_print_depth >= engine::lobby_print_max_depth)
+        {
+            if (msg != 0)
+            {
+                *reinterpret_cast<uint32_t*>(msg) = 1;
+            }
+
+            if (engine::lobby_print_blocked++ % 64 == 0)
+            {
+                T7_LOG(cx("lobbymsg: deep-nested print recursion dropped."));
+            }
+
+            return 16;
+        }
+
+        engine::lobby_print_depth++;
+
+        int64_t result = engine::lobby_print_debug_fn(msg);
+
+        engine::lobby_print_depth--;
+
+        return result;
+    }
+
+    static char __fastcall hk_lobby_print_message(int64_t msg, char force)
+    {
+        engine::lobby_print_depth = 0;
+
+        return engine::lobby_print_message_fn(msg, force);
     }
 
     void initialize()
@@ -359,6 +392,14 @@ namespace lobbymsg
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::handle_packet_internal), hk_handle_packet_internal);
 
-        T7_LOG(cx("lobbymsg: handle_packet_internal hook installed"));
+        engine::lobby_print_debug_fn = reinterpret_cast<engine::lobby_print_debug_t>(engine::base() + engine::lobby_print_debug);
+
+        utils::hook::attach(reinterpret_cast<void**>(&engine::lobby_print_debug_fn), hk_lobby_print_debug);
+
+        engine::lobby_print_message_fn = reinterpret_cast<engine::lobby_print_message_t>(engine::base() + engine::lobby_print_message);
+
+        utils::hook::attach(reinterpret_cast<void**>(&engine::lobby_print_message_fn), hk_lobby_print_message);
+
+        T7_LOG(cx("lobbymsg: handle_packet_internal + print-recursion protections installed."));
     }
 }

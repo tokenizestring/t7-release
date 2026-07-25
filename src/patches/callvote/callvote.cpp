@@ -59,11 +59,11 @@ namespace callvote
     {
         size_t length = vote_string != nullptr ? std::strlen(vote_string) : 0;
 
-        T7_LOG(std::string(cx("callvote: vote string '")) + std::string(vote_string != nullptr ? vote_string : "", length < 200 ? length : 200) + cx("' len ") + std::to_string(length));
+        T7_LOG(std::string(cx("callvote: vote string '")) + std::string(vote_string != nullptr ? vote_string : "", length < 200 ? length : 200) + cx("' len ") + std::to_string(length) + cx("."));
 
         if (length >= max_vote_length)
         {
-            T7_LOG(cx("callvote: oversized vote string dropped"));
+            T7_LOG(cx("callvote: oversized vote string dropped."));
 
             return;
         }
@@ -81,6 +81,6 @@ namespace callvote
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::vote_update), hk_vote_update);
 
-        T7_LOG(cx("callvote: crash guard installed"));
+        T7_LOG(cx("callvote: crash protection installed."));
     }
 }

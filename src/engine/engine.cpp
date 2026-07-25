@@ -44,6 +44,16 @@ static_assert(offsetof(engine::lobby_msg_s, type) == 56, "lobby_msg_s.type");
 static_assert(offsetof(engine::lobby_msg_s, mode) == 64, "lobby_msg_s.mode");
 static_assert(sizeof(engine::lobby_msg_s) == 128, "lobby_msg_s size");
 
+static_assert(sizeof(engine::client_data_s) == 0x342720, "client_data_s stride");
+static_assert(offsetof(engine::client_data_s, match_flags) == 0x18, "client_data_s match_flags");
+
+static_assert(offsetof(engine::lobby_state_msg_s, ugc_name) == 21408, "lobby_state_msg_s ugc_name");
+static_assert(offsetof(engine::lobby_state_msg_s, ugc_version) == 21440, "lobby_state_msg_s ugc_version");
+
+static_assert(sizeof(engine::client_connection_s) == 0x25780, "client_connection_s stride");
+static_assert(offsetof(engine::client_connection_s, server_command_sequence) == 0x4544, "client_connection_s server_command_sequence");
+static_assert(offsetof(engine::client_connection_s, reliable_commands) == 0x454C, "client_connection_s reliable_commands");
+
 static_assert(offsetof(engine::paragon_icon_entry, name) == 16, "paragon_icon_entry.name");
 static_assert(sizeof(engine::paragon_icon_entry) == 56, "paragon_icon_entry size");
 static_assert(sizeof(engine::paragon_icon_mode) == 3592, "paragon_icon_mode size");

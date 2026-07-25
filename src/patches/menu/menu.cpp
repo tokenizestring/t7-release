@@ -14,7 +14,7 @@ namespace menu
         {
             if (++blocked % 500 == 1)
             {
-                T7_LOG(std::string(cx("menu: blocked openmenu spam (x")) + std::to_string(blocked) + cx(")"));
+                T7_LOG(std::string(cx("menu: openmenu spam (x")) + std::to_string(blocked) + cx("), dropped."));
             }
 
             return 0;
@@ -29,6 +29,6 @@ namespace menu
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::open_menu_fn), hk_open_menu);
 
-        T7_LOG(cx("menu: openmenu spam guard installed"));
+        T7_LOG(cx("menu: openmenu spam protection installed."));
     }
 }

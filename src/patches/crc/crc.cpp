@@ -33,6 +33,6 @@ namespace crc
 
         utils::mem::apply_resource_patches(RES_CRC_ZERO_RAX_RDX, cx("zero_rax_rdx").c_str(), zero_rax_rdx);
 
-        T7_LOG(cx("crc: all patches applied")); 
+        T7_LOG(cx("crc: all patches applied."));
     }
 }

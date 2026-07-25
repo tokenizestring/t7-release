@@ -546,7 +546,7 @@ static bool upload(engine::gfx_image* image)
 
     image->srv = g_views[0];
 
-    T7_LOG(std::string(cx("logo: applied banner, ")) + std::to_string(g_views.size()) + cx(" frames at ") + std::to_string(target_w) + "x" + std::to_string(target_h));
+    T7_LOG(std::string(cx("logo: applied banner, ")) + std::to_string(g_views.size()) + cx(" frames at ") + std::to_string(target_w) + "x" + std::to_string(target_h) + cx("."));
 
     return true;
 }
@@ -588,12 +588,12 @@ namespace features::logo
     {
         if (!decode_embedded())
         {
-            T7_LOG(cx("logo: failed to decode embedded banner"));
+            T7_LOG(cx("logo: failed to decode embedded banner."));
 
             return;
         }
 
-        T7_LOG(std::string(cx("logo: decoded banner, ")) + std::to_string(g_raw.size()) + cx(" frames"));
+        T7_LOG(std::string(cx("logo: decoded banner, ")) + std::to_string(g_raw.size()) + cx(" frames."));
     }
 
     void tick()

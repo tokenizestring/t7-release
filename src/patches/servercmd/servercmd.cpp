@@ -8,25 +8,13 @@
 
 namespace servercmd
 {
-    static constexpr uint32_t serverpos_index_max = 1792;
-
-    static constexpr uint32_t model_notify_numargs_max = 16;
-
-    static constexpr uint32_t model_notify_window_ms = 250;
-
-    static constexpr uint32_t model_notify_window_max = 40;
-
-    static uint32_t model_notify_window_start = 0;
-
-    static uint32_t model_notify_count = 0;
-
     static int64_t __fastcall hk_get_server_command(uint32_t local_client, int32_t sequence)
     {
         int32_t current = engine::server_command_sequence(local_client);
 
-        if (sequence <= current - 128 || sequence > current)
+        if (sequence <= current - engine::max_reliable_commands || sequence > current)
         {
-            T7_LOG(std::string(cx("servercmd: skipped out-of-window sequence ")) + std::to_string(sequence) + cx(" of ") + std::to_string(current) + cx(" (kick guard)"));
+            T7_LOG(std::string(cx("servercmd: out-of-window sequence ")) + std::to_string(sequence) + cx(" of ") + std::to_string(current) + cx(", ignored."));
 
             return 0;
         }
@@ -46,16 +34,16 @@ namespace servercmd
 
             safe[i] = 0;
 
-            T7_LOG(std::string(cx("servercmd: [")) + std::to_string(sequence) + cx("] ") + safe);
+            T7_LOG(std::string(cx("servercmd: [")) + std::to_string(sequence) + cx("] ") + safe + cx("."));
         }
 
         if (command != nullptr && (command[0] == '&' || command[0] == '\''))
         {
             size_t projected = engine::bcs_length() + strlen(command);
 
-            if (projected >= 20480)
+            if (projected >= engine::bcs_reassembly_max)
             {
-                T7_LOG(std::string(cx("servercmd: blocked bcs reassembly overflow (")) + std::to_string(projected) + cx(" bytes) (kick guard)"));
+                T7_LOG(std::string(cx("servercmd: bcs reassembly overflow ")) + std::to_string(projected) + cx(" bytes, dropped."));
 
                 return 0;
             }
@@ -76,9 +64,9 @@ namespace servercmd
         {
             uint32_t index = engine::cmd_arg_int(engine::cmd_argv(1));
 
-            if (index >= serverpos_index_max)
+            if (index >= engine::serverpos_index_max)
             {
-                T7_LOG(std::string(cx("servercmd: blocked oob '/' index ")) + std::to_string(index) + cx(" (rce guard)"));
+                T7_LOG(std::string(cx("servercmd: oob '/' index ")) + std::to_string(index) + cx(", dropped."));
 
                 return 0;
             }
@@ -97,7 +85,7 @@ namespace servercmd
 
             if (team < 0 || team > 1 || entity >= 500)
             {
-                T7_LOG(std::string(cx("servercmd: blocked oob '7' team ")) + std::to_string(team) + cx(" entity ") + std::to_string(entity) + cx(" (rce guard)"));
+                T7_LOG(std::string(cx("servercmd: oob '7' team ")) + std::to_string(team) + cx(" entity ") + std::to_string(entity) + cx(", dropped."));
 
                 return 0;
             }
@@ -107,27 +95,27 @@ namespace servercmd
         {
             uint32_t num_args = static_cast<uint32_t>(engine::cmd_atoi(engine::cmd_argv(2)));
 
-            if (num_args > model_notify_numargs_max)
+            if (num_args > engine::model_notify_numargs_max)
             {
-                T7_LOG(std::string(cx("servercmd: blocked oversized 'D' model notify (")) + std::to_string(num_args) + cx(" args) (crash guard)"));
+                T7_LOG(std::string(cx("servercmd: oversized 'D' model notify ")) + std::to_string(num_args) + cx(" args, dropped."));
 
                 return 0;
             }
 
             uint32_t now = GetTickCount();
 
-            if (now - model_notify_window_start >= model_notify_window_ms)
+            if (now - engine::model_notify_window_start >= engine::model_notify_window_ms)
             {
-                model_notify_window_start = now;
+                engine::model_notify_window_start = now;
 
-                model_notify_count = 0;
+                engine::model_notify_count = 0;
             }
 
-            if (++model_notify_count > model_notify_window_max)
+            if (++engine::model_notify_count > engine::model_notify_window_max)
             {
-                if (model_notify_count % 200 == 1)
+                if (engine::model_notify_count % 200 == 1)
                 {
-                    T7_LOG(cx("servercmd: throttling 'D' model-notify flood (crash guard)"));
+                    T7_LOG(cx("servercmd: 'D' model-notify flood, dropped."));
                 }
 
                 return 0;
@@ -167,7 +155,7 @@ namespace servercmd
 
         if (state[1] != state[0])
         {
-            T7_LOG(cx("servercmd: neutralized bg-cache checksum mismatch (kick guard)"));
+            T7_LOG(cx("servercmd: bg-cache checksum mismatch, ignored."));
 
             state[1] = state[0];
         }
@@ -179,16 +167,16 @@ namespace servercmd
     {
         uint32_t index = static_cast<uint32_t>(engine::cmd_atoi(engine::cmd_argv(1)));
 
-        if (index > 3629)
+        if (index > engine::configstring_index_max)
         {
-            T7_LOG(std::string(cx("servercmd: blocked oob configstring index ")) + std::to_string(index) + cx(" (kick guard)"));
+            T7_LOG(std::string(cx("servercmd: oob configstring index ")) + std::to_string(index) + cx(", dropped."));
 
             return 0;
         }
 
         if (engine::configstring_pool_overflow(index, engine::cmd_argv(2)))
         {
-            T7_LOG(std::string(cx("servercmd: blocked configstring pool overflow at index ")) + std::to_string(index) + cx(" (kick guard)"));
+            T7_LOG(std::string(cx("servercmd: configstring pool overflow at index ")) + std::to_string(index) + cx(", dropped."));
 
             return 0;
         }
@@ -214,6 +202,6 @@ namespace servercmd
 
         //utils::hook::attach(reinterpret_cast<void**>(&engine::bg_cache_checksum_fn), hk_bg_cache_checksum); need to fix, too lazy to atm, since no one is using these exploits
 
-        T7_LOG(cx("servercmd: logger + rce guards + crash guards + kick guards (configstring + bg-cache) installed"));
+        T7_LOG(cx("servercmd: logger + rce/crash/kick protections installed."));
     }
 }

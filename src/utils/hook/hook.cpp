@@ -105,7 +105,7 @@ namespace utils::hook
             {
                 uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr));
 
-                T7_LOG(std::string(cx("hook: undecodable prologue at +")) + std::to_string(target - base));
+                T7_LOG(std::string(cx("hook: undecodable prologue at +")) + std::to_string(target - base) + cx("."));
 
                 return false;
             }

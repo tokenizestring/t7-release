@@ -16,7 +16,7 @@ static char __fastcall hk_send(void* ctx, uint64_t steam_id, void* data, uint32_
     {
         uint8_t type = data != nullptr ? *reinterpret_cast<uint8_t*>(data) : 0;
 
-        T7_LOG(std::string(cx("p2p: send ")) + std::to_string(size) + cx("b to ") + std::to_string(steam_id) + cx(" type ") + std::to_string(type) + cx(" failed to send."));
+        T7_LOG(std::string(cx("p2p: send ")) + std::to_string(size) + cx("b to ") + std::to_string(steam_id) + cx(" type ") + std::to_string(type) + cx(" dropped."));
 
         return 1;
     }
@@ -42,7 +42,7 @@ static char __fastcall hk_accept(void* ctx, uint64_t* steam_id)
 
     if (block_enabled)
     {
-        T7_LOG(std::string(cx("p2p: session request from ")) + std::to_string(id) + cx(" rejected."));
+        T7_LOG(std::string(cx("p2p: session request from ")) + std::to_string(id) + cx(" dropped."));
 
         return 0;
     }
@@ -86,8 +86,8 @@ namespace p2p
 
             block_enabled = !block_enabled;
 
-            if (block_enabled) T7_LOG(cx("p2p: enabled - steam p2p blocked (raw-udp dedis still work)"));
-            else T7_LOG(cx("p2p: disabled - steam p2p restored"));
+            if (block_enabled) T7_LOG(cx("p2p: enabled - steam p2p blocked (raw-udp dedis still work)."));
+            else T7_LOG(cx("p2p: disabled - steam p2p restored."));
         }
         else if (!down)
         {

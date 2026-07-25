@@ -24,7 +24,7 @@ namespace video
         {
             flags &= ~flag_remote_fetch;
 
-            T7_LOG(std::string(cx("video: blocked remote fetch ")) + reinterpret_cast<const char*>(name));
+            T7_LOG(std::string(cx("video: remote fetch ")) + reinterpret_cast<const char*>(name) + cx(", dropped."));
         }
 
         return engine::cinematic_open_fn(name, subtitle, flags, speed, callback, video_id);
@@ -40,6 +40,6 @@ namespace video
 
         //utils::hook::attach(reinterpret_cast<void**>(&engine::cinematic_open_fn), hk_open); need to fix our hooks decoder
 
-        T7_LOG(cx("video: remote-fetch guard + cutscene skip installed"));
+        T7_LOG(cx("video: remote-fetch protection + cutscene skip installed."));
     }
 }

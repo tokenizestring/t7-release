@@ -214,6 +214,6 @@ namespace markup
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::markup_interp_fn), hk_interp);
 
-        T7_LOG(cx("markup: text crash guard installed"));
+        T7_LOG(cx("markup: text crash protection installed."));
     }
 }

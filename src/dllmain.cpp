@@ -25,13 +25,15 @@
 #include "patches/servercmd/servercmd.hpp"
 #include "patches/video/video.hpp"
 #include "patches/menu/menu.hpp"
+#include "patches/perf/perf.hpp"
+#include "patches/lua/lua.hpp"
 #include "features/logo/logo.hpp"
 
 static DWORD WINAPI main_thread(LPVOID param)
 {
     T7_LOG_INIT();
 
-    T7_LOG(cx("attached"));
+    T7_LOG(cx("attached."));
 
     utils::exceptions::install();
 
@@ -47,7 +49,7 @@ static DWORD WINAPI main_thread(LPVOID param)
 
     Sleep(1000);
 
-    T7_LOG(cx("start cutscene up, installing"));
+    T7_LOG(cx("start cutscene up, installing."));
 
     crc::patch();
 
@@ -79,6 +81,8 @@ static DWORD WINAPI main_thread(LPVOID param)
 
     antiquit::initialize();
 
+    lua::initialize();
+
     hotkeys::initialize();
 
     workshop::initialize();
@@ -88,6 +92,8 @@ static DWORD WINAPI main_thread(LPVOID param)
     video::initialize();
 
     menu::initialize();
+
+    perf::initialize();
 
     features::logo::initialize();
 
@@ -100,6 +106,8 @@ static DWORD WINAPI main_thread(LPVOID param)
         p2p::tick();
 
         netchan::tick();
+
+        workshop::tick();
 
         features::logo::tick();
 
@@ -125,7 +133,7 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID reserved)
 
         case DLL_PROCESS_DETACH:
         {
-            T7_LOG(cx("detached"));
+            T7_LOG(cx("detached."));
         }
         break;
     }

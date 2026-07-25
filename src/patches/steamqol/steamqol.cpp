@@ -95,6 +95,6 @@ namespace steamqol
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::steam_friend_list_rebuild_fn), hk_friend_list_rebuild);
 
-        T7_LOG(cx("steamqol: dlc/app cache + friend-rebuild throttle installed (kills steam-ipc menu fps hitches)"));
+        T7_LOG(cx("steamqol: dlc/app cache + friend-rebuild throttle installed (kills steam-ipc menu fps hitches)."));
     }
 }

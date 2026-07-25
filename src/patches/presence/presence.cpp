@@ -41,7 +41,7 @@ namespace presence
             {
                 *packed = (*packed & ~(0x1F << 2)) | (max_players << 2);
 
-                T7_LOG(std::string(cx("presence: clamped player count from ")) + std::to_string(count) + cx(" to ") + std::to_string(max_players));
+                T7_LOG(std::string(cx("presence: player count from ")) + std::to_string(count) + cx(" to ") + std::to_string(max_players) + cx(", ignored."));
             }
         }
 
@@ -58,6 +58,6 @@ namespace presence
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::presence_pack), hk_presence_pack);
 
-        T7_LOG(cx("presence: crash guard installed"));
+        T7_LOG(cx("presence: crash protection installed."));
     }
 }

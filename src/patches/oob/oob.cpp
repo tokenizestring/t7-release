@@ -54,7 +54,7 @@ namespace oob
 
         if (line[0] != 0)
         {
-            T7_LOG(std::string(cx("oob(cl): ")) + line + (blocked ? cx(" dropped") : ""));
+            T7_LOG(std::string(cx("oob(cl): ")) + line + (blocked ? cx(" dropped") : cx("")) + cx("."));
         }
 
         return blocked ? 1 : engine::cl_connectionless(local_client_num, from, msg);
@@ -82,7 +82,7 @@ namespace oob
 
         if (line[0] != 0)
         {
-            T7_LOG(std::string(cx("oob(sv): ")) + line + (blocked ? cx(" dropped") : ""));
+            T7_LOG(std::string(cx("oob(sv): ")) + line + (blocked ? cx(" dropped") : cx("")) + cx("."));
         }
 
         return blocked ? 1 : engine::sv_connectionless(from, msg);
@@ -98,6 +98,6 @@ namespace oob
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::sv_connectionless), hk_sv_connectionless);
 
-        T7_LOG(cx("oob: guards installed"));
+        T7_LOG(cx("oob: protections installed."));
     }
 }

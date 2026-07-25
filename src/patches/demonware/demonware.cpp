@@ -20,7 +20,7 @@ namespace demonware
 
             bool blocked = type == 'f' || type == 'e';
 
-            T7_LOG(std::string(cx("demonware: '")) + type + cx("' from ") + std::to_string(sender_id) + cx(" size ") + std::to_string(message_size) + (blocked ? cx(" dropped") : ""));
+            T7_LOG(std::string(cx("demonware: '")) + type + cx("' from ") + std::to_string(sender_id) + cx(" size ") + std::to_string(message_size) + (blocked ? cx(" dropped") : cx("")) + cx("."));
 
             if (blocked)
             {
@@ -45,7 +45,7 @@ namespace demonware
 
                 bool blocked = type == 'f' || type == 'e';
 
-                T7_LOG(std::string(cx("steam(p2p): '")) + type + cx("' from ") + std::to_string(*sender_xuid) + cx(" size ") + std::to_string(*message_size) + (blocked ? cx(" dropped") : ""));
+                T7_LOG(std::string(cx("steam(p2p): '")) + type + cx("' from ") + std::to_string(*sender_xuid) + cx(" size ") + std::to_string(*message_size) + (blocked ? cx(" dropped") : cx("")) + cx("."));
 
                 if (blocked)
                 {
@@ -120,7 +120,7 @@ namespace demonware
 
         engine::send_info_response(controller_index, &target, 1, &response);
 
-        T7_LOG(std::string(cx("demonware: info response to ")) + std::to_string(recipient) + (allow ? cx(" (real)") : cx(" (spoofed)")));
+        T7_LOG(std::string(cx("demonware: info response to ")) + std::to_string(recipient) + (allow ? cx(" (real)") : cx(" (spoofed)")) + cx("."));
 
         return 1;
     }
@@ -137,7 +137,7 @@ namespace demonware
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::build_info_response), hk_build_info_response);
 
-        T7_LOG(cx("demonware: dispatch guard installed"));
+        T7_LOG(cx("demonware: dispatch protection installed."));
     }
 
     void tick()
@@ -160,6 +160,6 @@ namespace demonware
 
         utils::mem::patch(slot, reinterpret_cast<const uint8_t*>(&detour), sizeof(void*));
 
-        T7_LOG(cx("demonware: steam p2p guard installed"));
+        T7_LOG(cx("demonware: steam p2p protection installed."));
     }
 }

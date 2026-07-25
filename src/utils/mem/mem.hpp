@@ -58,7 +58,7 @@ namespace utils::mem
 
             uintptr_t base = get_process_base();
 
-            T7_LOG("crc: patching " + std::string(name) + " (" + std::to_string(count) + " addresses)");
+            T7_LOG("crc: patching " + std::string(name) + " (" + std::to_string(count) + " addresses).");
 
             for (size_t i = 0; i < count; i++)
             {

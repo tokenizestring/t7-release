@@ -69,7 +69,7 @@ namespace infoleak
 
                 snprintf(endpoint, sizeof(endpoint), "%u.%u.%u.%u:%u", dest->ip[0], dest->ip[1], dest->ip[2], dest->ip[3], dest->port);
 
-                T7_LOG(std::string(cx("infoleak: raw-udp to non-host ")) + endpoint + (enforce ? cx(" dropped") : cx(" (log only)")));
+                T7_LOG(std::string(cx("infoleak: raw-udp to non-host ")) + endpoint + (enforce ? cx(" dropped") : cx(" (log only)")) + cx("."));
 
                 if (enforce)
                 {
@@ -99,6 +99,6 @@ namespace infoleak
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::steam_rich_presence_steamid_fn), hk_rich_presence_null);
 
-        T7_LOG(cx("infoleak: ip leak guard installed (+ steam rich-presence nulled)"));
+        T7_LOG(cx("infoleak: ip leak protection installed (+ steam rich-presence nulled)."));
     }
 }

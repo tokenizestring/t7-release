@@ -18,7 +18,7 @@ namespace mspreload
 
             if (value != nullptr && (_strnicmp(value, "mspreload", 9) == 0 || _strnicmp(value, "msload", 6) == 0))
             {
-                T7_LOG(std::string(cx("mspreload: crash blocked (")) + value + ")");
+                T7_LOG(std::string(cx("mspreload: forced side-load ")) + value + cx(", dropped."));
 
                 engine::store_config_string(index, "");
             }
@@ -33,6 +33,6 @@ namespace mspreload
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::get_config_string), hk_get_config_string);
 
-        T7_LOG(cx("mspreload: guard installed"));
+        T7_LOG(cx("mspreload: protection installed."));
     }
 }
