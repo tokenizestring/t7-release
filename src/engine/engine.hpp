@@ -137,6 +137,12 @@ namespace engine
 
         cl_set_config_string = 0x1320180,
 
+        open_menu = 0x2233950,
+
+        menu_state = 0x2231280,
+
+        menu_current_field = 0x184C,
+
         bg_cache_checksum = 0xA9CB0,
 
         bg_cache_state = 0x3EC4DF0,
@@ -639,6 +645,16 @@ namespace engine
     void* lobby_party(uint32_t index);
 
     int ui_screen();
+
+    bool at_menu();
+
+    bool start_cutscene();
+
+    int32_t current_menu_id();
+
+    typedef int64_t(__fastcall* open_menu_t)(uint32_t controller, int menu_id);
+
+    inline open_menu_t open_menu_fn = nullptr;
 
     int nat_type();
 

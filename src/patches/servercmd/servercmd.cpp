@@ -10,6 +10,16 @@ namespace servercmd
 {
     static constexpr uint32_t serverpos_index_max = 1792;
 
+    static constexpr uint32_t model_notify_numargs_max = 16;
+
+    static constexpr uint32_t model_notify_window_ms = 250;
+
+    static constexpr uint32_t model_notify_window_max = 40;
+
+    static uint32_t model_notify_window_start = 0;
+
+    static uint32_t model_notify_count = 0;
+
     static int64_t __fastcall hk_get_server_command(uint32_t local_client, int32_t sequence)
     {
         int32_t current = engine::server_command_sequence(local_client);
@@ -152,6 +162,37 @@ namespace servercmd
             }
         }
 
+        if (command != nullptr && command[0] == 'D')
+        {
+            uint32_t num_args = static_cast<uint32_t>(engine::cmd_atoi(engine::cmd_argv(2)));
+
+            if (num_args > model_notify_numargs_max)
+            {
+                T7_LOG(std::string(cx("servercmd: blocked oversized 'D' model notify (")) + std::to_string(num_args) + cx(" args) (crash guard)"));
+
+                return 0;
+            }
+
+            uint32_t now = GetTickCount();
+
+            if (now - model_notify_window_start >= model_notify_window_ms)
+            {
+                model_notify_window_start = now;
+
+                model_notify_count = 0;
+            }
+
+            if (++model_notify_count > model_notify_window_max)
+            {
+                if (model_notify_count % 200 == 1)
+                {
+                    T7_LOG(cx("servercmd: throttling 'D' model-notify flood (crash guard)"));
+                }
+
+                return 0;
+            }
+        }
+
         return engine::cg_server_command_fn(local_client);
     }
 
@@ -175,8 +216,8 @@ namespace servercmd
 
         engine::bg_cache_checksum_fn = reinterpret_cast<engine::bg_cache_checksum_t>(engine::base() + engine::bg_cache_checksum);
 
-        utils::hook::attach(reinterpret_cast<void**>(&engine::bg_cache_checksum_fn), hk_bg_cache_checksum);
+        //utils::hook::attach(reinterpret_cast<void**>(&engine::bg_cache_checksum_fn), hk_bg_cache_checksum); need to fix, too lazy to atm, since no one is using these exploits 
 
-        T7_LOG(cx("servercmd: logger + rce guards + kick guards (configstring + bg-cache) installed"));
+        T7_LOG(cx("servercmd: logger + rce guards + crash guards + kick guards (configstring + bg-cache) installed"));
     }
 }

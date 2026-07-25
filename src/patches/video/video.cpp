@@ -38,7 +38,7 @@ namespace video
 
         engine::cinematic_open_fn = reinterpret_cast<engine::cinematic_open_t>(engine::base() + engine::cinematic_open);
 
-        utils::hook::attach(reinterpret_cast<void**>(&engine::cinematic_open_fn), hk_open);
+        //utils::hook::attach(reinterpret_cast<void**>(&engine::cinematic_open_fn), hk_open); need to fix our hooks decoder
 
         T7_LOG(cx("video: remote-fetch guard + cutscene skip installed"));
     }

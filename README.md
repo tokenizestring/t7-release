@@ -26,6 +26,7 @@ Every host→client server command is validated before the game processes it (an
 - `/` command — clamps the entity index; the game had none, so an out-of-range index read a pointer out of bounds and **wrote through it** = remote code execution.
 - `7` command — clamps the team/entity indices to stop a remote out-of-bounds write.
 - message commands (`)` `<` `;` `O`) — routes the formatter through a large scratch buffer to stop a `[{...}]`-token stack overflow.
+- `D` command — bounds the arg-count and rate-limits the opcode; it sets a LUI data-model and notifies every subscriber, so a host flooding it exhausts the LUI element pool = **client crash** (`Failed to allocate from element pool`).
 - kick immunity — neutralizes the host-triggered forced-disconnects: bad configstring index, 64 KB configstring-pool overflow, big-configstring reassembly overflow, reliable-sequence cycle-out, and the BG-cache checksum mismatch (configstring 3241).
 
 **Crash / exploit guards**
@@ -40,6 +41,7 @@ Every host→client server command is validated before the game processes it (an
 - `callvote` — clamps and sanitizes oversized vote strings.
 - `presence` — clamps the LivePresence player count to stop the serialize overflow.
 - `paragon` — guards the malformed paragon-icon scoreboard lookup.
+- `menu` — de-dupes repeated `OpenMenu` calls, killing the GSC pause-menu spam crash that exhausts the LUI element pool.
 
 **Privacy**
 

@@ -1,5 +1,6 @@
 #include "proxy/exports.g.h"
 
+#include "engine/engine.hpp"
 #include "utils/log/log.hpp"
 #include "utils/crypt/crypt.hpp"
 #include "utils/exceptions/exceptions.hpp"
@@ -23,6 +24,7 @@
 #include "patches/workshop/workshop.hpp"
 #include "patches/servercmd/servercmd.hpp"
 #include "patches/video/video.hpp"
+#include "patches/menu/menu.hpp"
 #include "features/logo/logo.hpp"
 
 static DWORD WINAPI main_thread(LPVOID param)
@@ -37,6 +39,15 @@ static DWORD WINAPI main_thread(LPVOID param)
     {
         Sleep(100);
     }
+
+    while (!engine::start_cutscene())
+    {
+        Sleep(50);
+    }
+
+    Sleep(1000);
+
+    T7_LOG(cx("start cutscene up, installing"));
 
     crc::patch();
 
@@ -75,6 +86,8 @@ static DWORD WINAPI main_thread(LPVOID param)
     servercmd::initialize();
 
     video::initialize();
+
+    menu::initialize();
 
     features::logo::initialize();
 

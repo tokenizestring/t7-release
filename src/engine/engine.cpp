@@ -231,6 +231,32 @@ namespace engine
         return reinterpret_cast<int_getter_t>(base() + dw_ui_screen)();
     }
 
+    bool at_menu()
+    {
+        return d3d_device() != nullptr && ui_screen() != 0;
+    }
+
+    bool start_cutscene()
+    {
+        return d3d_device() != nullptr && cinematic_playing();
+    }
+
+    typedef char*(__fastcall* menu_state_t)();
+
+    int32_t current_menu_id()
+    {
+        uintptr_t module_base = base();
+
+        if (module_base == 0)
+        {
+            return -1;
+        }
+
+        char* state = reinterpret_cast<menu_state_t>(module_base + menu_state)();
+
+        return state != nullptr ? *reinterpret_cast<int32_t*>(state + menu_current_field) : -1;
+    }
+
     int nat_type()
     {
         return reinterpret_cast<int_getter_t>(base() + dw_nat_type)();

@@ -25,7 +25,7 @@ namespace crc
         return *reinterpret_cast<__int64*>(base + engine::crc_ready_flag) != 0;
     }
 
-    void patch()
+    void patch() 
     {
         utils::mem::apply_resource_patches(RES_CRC_ZERO_RCX_6, cx("zero_rcx_6").c_str(), zero_rcx_6);
 
