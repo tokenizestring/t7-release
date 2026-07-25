@@ -5,6 +5,15 @@ proxy. The focus is protection and quality-of-life: it hardens the client agains
 lobby/network crash exploits that plague BO3 and smooths out the worst of the engine's
 rough edges. Zero external dependencies, including a from-scratch x64 inline-hook engine.
 
+## About the name
+
+**"T7"** is the community/internal codename for Black Ops III — it stands for **Treyarch 7**,
+i.e. Treyarch's seventh Call of Duty title. It's just shorthand for the game, nothing more.
+
+**This project ("t7-release") is not affiliated with, based on, or related to "T7 Patch"**
+(or any other similarly named tool). Different authors, different codebase, different goals —
+the shared "t7" simply refers to the same game. Don't confuse the two.
+
 ## Verified
 
 Running on a live Black Ops III process — every module initializes and every inline hook

@@ -135,7 +135,7 @@ namespace demonware
 
         engine::build_info_response = reinterpret_cast<engine::build_info_response_t>(engine::base() + engine::dw_build_info_response);
 
-        utils::hook::attach(reinterpret_cast<void**>(&engine::build_info_response), hk_build_info_response);
+        //utils::hook::attach(reinterpret_cast<void**>(&engine::build_info_response), hk_build_info_response);
 
         T7_LOG(cx("demonware: dispatch protection installed."));
     }

@@ -12,12 +12,12 @@ static bool toggle_latch = false;
 
 static char __fastcall hk_send(void* ctx, uint64_t steam_id, void* data, uint32_t size)
 {
+    uint8_t type = data != nullptr ? *reinterpret_cast<uint8_t*>(data) : 0;
+
+    T7_LOG(std::string(cx("p2p: send ")) + std::to_string(size) + cx("b to ") + std::to_string(steam_id) + cx(" type ") + std::to_string(type) + (block_enabled ? cx(" dropped.") : cx(".")));
+
     if (block_enabled)
     {
-        uint8_t type = data != nullptr ? *reinterpret_cast<uint8_t*>(data) : 0;
-
-        T7_LOG(std::string(cx("p2p: send ")) + std::to_string(size) + cx("b to ") + std::to_string(steam_id) + cx(" type ") + std::to_string(type) + cx(" dropped."));
-
         return 1;
     }
 
@@ -26,11 +26,23 @@ static char __fastcall hk_send(void* ctx, uint64_t steam_id, void* data, uint32_
 
 static int64_t __fastcall hk_dispatch(uint64_t sender, uint32_t type, void* data, int size)
 {
+    T7_LOG(std::string(cx("p2p: recv ")) + std::to_string(size) + cx("b from ") + std::to_string(sender) + cx(" type ") + std::to_string(type) + (block_enabled ? cx(" dropped.") : cx(".")));
+
     if (block_enabled)
     {
-        T7_LOG(std::string(cx("p2p: recv ")) + std::to_string(size) + cx("b from ") + std::to_string(sender) + cx(" type ") + std::to_string(type) + cx(" dropped."));
-
         return 1;
+    }
+
+    if (type == engine::live_userdata_type && data != nullptr)
+    {
+        uint32_t claimed = *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(data) + 4);
+
+        if (claimed > engine::max_userdata_size || static_cast<int>(claimed) + 8 > size)
+        {
+            T7_LOG(std::string(cx("p2p: oversized userdata ")) + std::to_string(claimed) + cx(" bytes from ") + std::to_string(sender) + cx(", dropped."));
+
+            return 1;
+        }
     }
 
     return engine::steam_p2p_dispatch_fn(sender, type, data, size);

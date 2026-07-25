@@ -187,23 +187,6 @@ namespace netchan
         return engine::netchan_reassemble_fn(client, channel, message, out_msgid, out_src, out_seq);
     }
 
-    static char __fastcall hk_live_userdata_store(void* table, int64_t a2, int type, int64_t data, int64_t a5)
-    {
-        if (type == 21 && data != 0)
-        {
-            uint32_t size = *reinterpret_cast<uint32_t*>(data + 4);
-
-            if (size > engine::max_userdata_size)
-            {
-                T7_LOG(std::string(cx("netchan: oversized live userdata ")) + std::to_string(size) + cx(", dropped."));
-
-                return 1;
-            }
-        }
-
-        return engine::live_userdata_store_fn(table, a2, type, data, a5);
-    }
-
     void initialize()
     {
         engine::cl_parse_gamestate_fn = reinterpret_cast<engine::cl_parse_gamestate_t>(engine::base() + engine::cl_parse_gamestate);
@@ -217,10 +200,6 @@ namespace netchan
         engine::sv_packet_event_fn = reinterpret_cast<engine::sv_packet_event_t>(engine::base() + engine::sv_packet_event);
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::sv_packet_event_fn), hk_sv_packet_event);
-
-        engine::live_userdata_store_fn = reinterpret_cast<engine::live_userdata_store_t>(engine::base() + engine::live_userdata_store);
-
-        utils::hook::attach(reinterpret_cast<void**>(&engine::live_userdata_store_fn), hk_live_userdata_store);
 
         original_net_send = reinterpret_cast<engine::net_send_packet_t>(engine::base() + engine::net_send);
 

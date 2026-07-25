@@ -4,6 +4,8 @@
 
 #include <cstddef>
 #include <d3d11.h>
+#include <mutex>
+#include <unordered_map>
 
 namespace engine
 {
@@ -79,7 +81,6 @@ namespace engine
 
         sv_write_reliable_commands = 0x21FF7C0,
 
-        live_userdata_store = 0x1EA8290,
 
         sv_packet_event = 0x21F82E0,
 
@@ -194,6 +195,8 @@ namespace engine
         steam_is_dlc_installed = 0x1EA4A90,
 
         steam_is_app_installed = 0x1EA44A0,
+
+        steam_dlc_progress = 0x20FBFF0,
 
         steam_friend_list_rebuild = 0x1DEE400,
 
@@ -806,10 +809,6 @@ namespace engine
 
     inline sv_write_reliable_commands_t sv_write_reliable_commands_fn = nullptr;
 
-    typedef char(__fastcall* live_userdata_store_t)(void* table, int64_t a2, int type, int64_t data, int64_t a5);
-
-    inline live_userdata_store_t live_userdata_store_fn = nullptr;
-
     typedef void(__fastcall* sv_packet_event_t)(void* from, uint64_t xuid, void* msg);
 
     inline sv_packet_event_t sv_packet_event_fn = nullptr;
@@ -873,6 +872,79 @@ namespace engine
     typedef char(__fastcall* steam_friend_list_rebuild_t)(uint32_t controller);
 
     inline steam_friend_list_rebuild_t steam_friend_list_rebuild_fn = nullptr;
+
+    static constexpr uint32_t dlc_progress_slots = 5;
+
+    static constexpr uint64_t dlc_progress_interval_ms = 2000;
+
+    static constexpr uint64_t friend_rebuild_interval_ms = 20000;
+
+    struct steam_install_cache
+    {
+        std::mutex mutex;
+
+        std::unordered_map<uint32_t, bool> entries;
+
+        bool query(steam_is_installed_t original, uint32_t app_id)
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+
+            auto entry = entries.find(app_id);
+
+            if (entry != entries.end())
+            {
+                return entry->second;
+            }
+
+            bool result = original(app_id);
+
+            entries[app_id] = result;
+
+            return result;
+        }
+    };
+
+    struct frame_throttle
+    {
+        uint64_t interval_ms = 0;
+
+        uint64_t last = 0;
+
+        bool ready()
+        {
+            uint64_t now = GetTickCount64();
+
+            if (last != 0 && now - last < interval_ms)
+            {
+                return false;
+            }
+
+            last = now;
+
+            return true;
+        }
+    };
+
+    struct dlc_progress_entry
+    {
+        double value = 0.0;
+
+        uint64_t next = 0;
+    };
+
+    inline steam_install_cache dlc_cache;
+
+    inline steam_install_cache app_cache;
+
+    inline frame_throttle friend_rebuild_throttle{ friend_rebuild_interval_ms };
+
+    inline std::mutex dlc_progress_mutex;
+
+    inline dlc_progress_entry dlc_progress[dlc_progress_slots];
+
+    typedef double(__fastcall* steam_dlc_progress_t)(uint32_t index);
+
+    inline steam_dlc_progress_t steam_dlc_progress_fn = nullptr;
 
     typedef void(__fastcall* steam_rich_presence_t)(uint64_t steam_id);
 
@@ -1001,6 +1073,8 @@ namespace engine
     static constexpr size_t client_netadr_offset = 44;
 
     static constexpr uint32_t max_userdata_size = 1024;
+
+    static constexpr uint32_t live_userdata_type = 21;
 
     const char* server_command(uint32_t local_client, int32_t sequence);
 
