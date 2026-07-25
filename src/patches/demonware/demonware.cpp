@@ -4,6 +4,7 @@
 #include "../../utils/mem/mem.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 #include <cstring>
 #include <cstdlib>
@@ -24,6 +25,8 @@ namespace demonware
 
             if (blocked)
             {
+                features::overlay::notify(cx("blocked malicious packet."), features::overlay::level::bad);
+
                 return 1;
             }
         }
@@ -49,6 +52,8 @@ namespace demonware
 
                 if (blocked)
                 {
+                    features::overlay::notify(cx("blocked malicious packet."), features::overlay::level::bad);
+
                     return false;
                 }
             }

@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 #include <cstring>
 #include <cctype>
@@ -57,6 +58,11 @@ namespace oob
             T7_LOG(std::string(cx("oob(cl): ")) + line + (blocked ? cx(" dropped") : cx("")) + cx("."));
         }
 
+        if (blocked)
+        {
+            features::overlay::notify(cx("blocked oob(cl)."), features::overlay::level::bad);
+        }
+
         return blocked ? 1 : engine::cl_connectionless(local_client_num, from, msg);
     }
 
@@ -83,6 +89,11 @@ namespace oob
         if (line[0] != 0)
         {
             T7_LOG(std::string(cx("oob(sv): ")) + line + (blocked ? cx(" dropped") : cx("")) + cx("."));
+        }
+
+        if (blocked)
+        {
+            features::overlay::notify(cx("blocked oob(sv)."), features::overlay::level::bad);
         }
 
         return blocked ? 1 : engine::sv_connectionless(from, msg);

@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 #include <string>
 
@@ -40,6 +41,8 @@ static int64_t __fastcall hk_dispatch(uint64_t sender, uint32_t type, void* data
         if (claimed > engine::max_userdata_size || static_cast<int>(claimed) + 8 > size)
         {
             T7_LOG(std::string(cx("p2p: oversized userdata ")) + std::to_string(claimed) + cx(" bytes from ") + std::to_string(sender) + cx(", dropped."));
+
+            features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
 
             return 1;
         }

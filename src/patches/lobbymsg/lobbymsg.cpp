@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -64,6 +65,8 @@ namespace lobbymsg
             if (cap.count == cap.limit + 1)
             {
                 T7_LOG(std::string(cx("lobbymsg: array overflow (")) + (cap.key != nullptr ? cap.key : "?") + cx(" capped at ") + std::to_string(cap.limit) + cx("), dropped."));
+
+                features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
             }
 
             return 0;
@@ -107,6 +110,8 @@ namespace lobbymsg
         if (claimed_xuid != sender_xuid)
         {
             T7_LOG(std::string(cx("lobbymsg: spoofed sender ")) + std::to_string(sender_xuid) + cx(" claimed ") + std::to_string(claimed_xuid) + cx(", dropped."));
+
+            features::overlay::notify(cx("blocked spoofed lobby packet."), features::overlay::level::bad);
 
             return false;
         }
@@ -153,6 +158,8 @@ namespace lobbymsg
             {
                 T7_LOG(std::string(cx("lobbymsg: voice_packet oob offset ")) + std::to_string(offset) + cx(" size ") + std::to_string(voice_size) + cx(", dropped."));
 
+                features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
+
                 return false;
             }
 
@@ -161,6 +168,8 @@ namespace lobbymsg
             if (offset + length > voice_size)
             {
                 T7_LOG(std::string(cx("lobbymsg: voice_packet oob end ")) + std::to_string(offset + length) + cx(" size ") + std::to_string(voice_size) + cx(", dropped."));
+
+                features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
 
                 return false;
             }
@@ -230,6 +239,8 @@ namespace lobbymsg
             if (disc_xuid != sender_xuid)
             {
                 T7_LOG(std::string(cx("lobbymsg: reliable_data ")) + std::to_string(sender_xuid) + cx(" spoofed ") + std::to_string(disc_xuid) + cx(", dropped."));
+
+                features::overlay::notify(cx("blocked spoofed lobby packet."), features::overlay::level::bad);
 
                 return false;
             }
@@ -333,6 +344,8 @@ namespace lobbymsg
             if (engine::lobby_print_blocked++ % 64 == 0)
             {
                 T7_LOG(cx("lobbymsg: deep-nested print recursion dropped."));
+
+                features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
             }
 
             return 16;

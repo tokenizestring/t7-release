@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 namespace video
 {
@@ -25,6 +26,8 @@ namespace video
             flags &= ~flag_remote_fetch;
 
             T7_LOG(std::string(cx("video: remote fetch ")) + reinterpret_cast<const char*>(name) + cx(", dropped."));
+
+            features::overlay::notify(cx("blocked remote fetch."), features::overlay::level::bad);
         }
 
         return engine::cinematic_open_fn(name, subtitle, flags, speed, callback, video_id);

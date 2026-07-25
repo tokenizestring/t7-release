@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 #include <cstring>
 
@@ -64,6 +65,8 @@ namespace callvote
         if (length >= max_vote_length)
         {
             T7_LOG(cx("callvote: oversized vote string dropped."));
+
+            features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
 
             return;
         }

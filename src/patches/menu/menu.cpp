@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 namespace menu
 {
@@ -15,6 +16,8 @@ namespace menu
             if (++blocked % 500 == 1)
             {
                 T7_LOG(std::string(cx("menu: openmenu spam (x")) + std::to_string(blocked) + cx("), dropped."));
+
+                features::overlay::notify(cx("blocked menu spam."), features::overlay::level::bad);
             }
 
             return 0;

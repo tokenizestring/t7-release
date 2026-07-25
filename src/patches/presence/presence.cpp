@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 #include <cstring>
 
@@ -42,6 +43,8 @@ namespace presence
                 *packed = (*packed & ~(0x1F << 2)) | (max_players << 2);
 
                 T7_LOG(std::string(cx("presence: player count from ")) + std::to_string(count) + cx(" to ") + std::to_string(max_players) + cx(", ignored."));
+
+                features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
             }
         }
 

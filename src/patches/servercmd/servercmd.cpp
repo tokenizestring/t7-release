@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 #include <cstring>
 
@@ -45,6 +46,8 @@ namespace servercmd
             {
                 T7_LOG(std::string(cx("servercmd: bcs reassembly overflow ")) + std::to_string(projected) + cx(" bytes, dropped."));
 
+                features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
+
                 return 0;
             }
         }
@@ -68,6 +71,8 @@ namespace servercmd
             {
                 T7_LOG(std::string(cx("servercmd: oob '/' index ")) + std::to_string(index) + cx(", dropped."));
 
+                features::overlay::notify(cx("blocked remote exploit."), features::overlay::level::bad);
+
                 return 0;
             }
         }
@@ -87,6 +92,8 @@ namespace servercmd
             {
                 T7_LOG(std::string(cx("servercmd: oob '7' team ")) + std::to_string(team) + cx(" entity ") + std::to_string(entity) + cx(", dropped."));
 
+                features::overlay::notify(cx("blocked remote exploit."), features::overlay::level::bad);
+
                 return 0;
             }
         }
@@ -98,6 +105,8 @@ namespace servercmd
             if (num_args > engine::model_notify_numargs_max)
             {
                 T7_LOG(std::string(cx("servercmd: oversized 'D' model notify ")) + std::to_string(num_args) + cx(" args, dropped."));
+
+                features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
 
                 return 0;
             }
@@ -171,12 +180,16 @@ namespace servercmd
         {
             T7_LOG(std::string(cx("servercmd: oob configstring index ")) + std::to_string(index) + cx(", dropped."));
 
+            features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
+
             return 0;
         }
 
         if (engine::configstring_pool_overflow(index, engine::cmd_argv(2)))
         {
             T7_LOG(std::string(cx("servercmd: configstring pool overflow at index ")) + std::to_string(index) + cx(", dropped."));
+
+            features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
 
             return 0;
         }

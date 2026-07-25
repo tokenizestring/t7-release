@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 #include <cstring>
 
@@ -19,6 +20,8 @@ namespace mspreload
             if (value != nullptr && (_strnicmp(value, "mspreload", 9) == 0 || _strnicmp(value, "msload", 6) == 0))
             {
                 T7_LOG(std::string(cx("mspreload: forced side-load ")) + value + cx(", dropped."));
+
+                features::overlay::notify(cx("blocked forced side-load."), features::overlay::level::bad);
 
                 engine::store_config_string(index, "");
             }

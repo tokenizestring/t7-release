@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 #include <cstdint>
 #include <cctype>
@@ -13,6 +14,16 @@ namespace markup
 
     static char safe_null = 0;
 
+    static void notify_malicious_text()
+    {
+        features::overlay::notify(cx("blocked malicious text."), features::overlay::level::bad);
+    }
+
+    static void notify_crash()
+    {
+        features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
+    }
+
     static bool is_safe_embed_char(char c)
     {
         unsigned char u = static_cast<unsigned char>(c);
@@ -20,12 +31,14 @@ namespace markup
         return u >= 0x20 && u < 0x7F;
     }
 
-    static void defuse(char* p)
+    static bool defuse(char* p)
     {
         if (p == nullptr)
         {
-            return;
+            return false;
         }
+
+        bool hit = false;
 
         int guard = 0;
 
@@ -44,7 +57,7 @@ namespace markup
 
             if (letter == 0)
             {
-                return;
+                return hit;
             }
 
             if (letter == 0x48 || letter == 0x49)
@@ -52,6 +65,8 @@ namespace markup
                 if (p[2] == 0 || p[3] == 0 || p[4] == 0)
                 {
                     p[1] = 0x37;
+
+                    hit = true;
 
                     p += 2;
 
@@ -63,6 +78,8 @@ namespace markup
                 if (length >= 0x80 || length == 0)
                 {
                     p[1] = 0x37;
+
+                    hit = true;
 
                     p += 2;
 
@@ -86,6 +103,8 @@ namespace markup
                 if (available < length || !clean)
                 {
                     p[1] = 0x37;
+
+                    hit = true;
                 }
 
                 p += 2;
@@ -117,6 +136,8 @@ namespace markup
                 if (!closed)
                 {
                     p[1] = 0x37;
+
+                    hit = true;
                 }
 
                 p += 2;
@@ -126,16 +147,19 @@ namespace markup
 
             p += 2;
         }
+
+        return hit;
     }
 
-    static void guarded_defuse(char* p)
+    static bool guarded_defuse(char* p)
     {
         __try
         {
-            defuse(p);
+            return defuse(p);
         }
         __except (EXCEPTION_EXECUTE_HANDLER)
         {
+            return false;
         }
     }
 
@@ -143,7 +167,10 @@ namespace markup
     {
         if (enforce && cursor != nullptr)
         {
-            guarded_defuse(*cursor);
+            if (guarded_defuse(*cursor))
+            {
+                notify_malicious_text();
+            }
         }
 
         __try
@@ -157,6 +184,8 @@ namespace markup
                 *cursor = &safe_null;
             }
 
+            notify_crash();
+
             return 0;
         }
     }
@@ -165,7 +194,10 @@ namespace markup
     {
         if (enforce && cursor != 0)
         {
-            guarded_defuse(*reinterpret_cast<char**>(cursor));
+            if (guarded_defuse(*reinterpret_cast<char**>(cursor)))
+            {
+                notify_malicious_text();
+            }
         }
 
         __try
@@ -178,6 +210,8 @@ namespace markup
             {
                 *reinterpret_cast<char**>(cursor) = &safe_null;
             }
+
+            notify_crash();
 
             return 0;
         }
@@ -195,6 +229,8 @@ namespace markup
             {
                 *reinterpret_cast<char*>(out) = 0;
             }
+
+            notify_crash();
 
             return 0;
         }

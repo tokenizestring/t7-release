@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 #include <cstring>
 
@@ -25,6 +26,8 @@ namespace workshop
                 memcpy(name, state->ugc_name, sizeof(state->ugc_name));
 
                 T7_LOG(std::string(cx("workshop: host-forced ugc '")) + name + cx("', dropped."));
+
+                features::overlay::notify(cx("blocked forced workshop mod."), features::overlay::level::bad);
 
                 memset(state->ugc_name, 0, sizeof(state->ugc_name));
 

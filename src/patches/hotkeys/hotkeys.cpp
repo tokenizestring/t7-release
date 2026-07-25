@@ -4,7 +4,6 @@
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
 #include "../video/video.hpp"
-#include "../lua/lua.hpp"
 
 namespace hotkeys
 {
@@ -15,8 +14,6 @@ namespace hotkeys
     static void* __fastcall hk_frame_callback()
     {
         void* result = engine::steam_frame_callback_fn();
-
-        lua::tick();
 
         bool disconnect_down = (GetAsyncKeyState(VK_F2) & 0x8000) != 0;
 

@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 #include <cstdint>
 #include <cstdlib>
@@ -81,6 +82,8 @@ namespace netchan
                 {
                     T7_LOG(std::string(cx("netchan: spoofed packet xuid ")) + std::to_string(xuid) + cx(" client ") + std::to_string(client_num) + cx(" dropped."));
 
+                    features::overlay::notify(cx("blocked spoofed packet."), features::overlay::level::bad);
+
                     return;
                 }
             }
@@ -130,6 +133,8 @@ namespace netchan
         {
             T7_LOG(std::string(cx("netchan: gamedata server_id=")) + std::to_string(server_id) + cx(" cs=\"") + std::string(config_string) + cx("\", dropped."));
 
+            features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
+
             return 0;
         }
 
@@ -174,6 +179,8 @@ namespace netchan
                         if (reassemble_blocked++ % 64 == 0)
                         {
                             T7_LOG(std::string(cx("netchan: oob reassembly client ")) + std::to_string(client) + cx(" channel ") + std::to_string(chan) + cx(" frag ") + std::to_string(index) + cx(" len ") + std::to_string(length) + cx(" cap ") + std::to_string(capacity) + cx(", dropped."));
+
+                            features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
                         }
 
                         return 0;

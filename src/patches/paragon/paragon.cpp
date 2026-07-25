@@ -3,6 +3,7 @@
 #include "../../utils/hook/hook.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
+#include "../../features/overlay/overlay.hpp"
 
 static engine::paragon_icon_entry safe_entry = {};
 
@@ -24,6 +25,8 @@ static char* __fastcall hk_paragon_icon_name(uint32_t mode, int icon_id)
     if (blocked_count == 1 || blocked_count % 300 == 0)
     {
         T7_LOG(std::string(cx("paragon: malformed paragon-icon lookup (x")) + std::to_string(blocked_count) + cx("), dropped."));
+
+        features::overlay::notify(cx("blocked scoreboard crash."), features::overlay::level::bad);
     }
 
     return reinterpret_cast<char*>(&safe_entry);

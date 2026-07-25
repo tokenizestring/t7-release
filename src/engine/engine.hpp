@@ -218,6 +218,10 @@ namespace engine
 
         steam_frame_callback = 0x1EA4070,
 
+        lod_params_reader = 0x1CE5230,
+
+        resident_mip_request = 0x1CFA3B0,
+
         frame_fps_cap = 0xF7CFD0,
 
         lua_get_vm = 0x1F05920,
@@ -231,6 +235,10 @@ namespace engine
         netchan_reassemble = 0x211C570,
 
         netchan_msg_table = 0x16DEAEB0,
+
+        clientfield_checksum_validate = 0x843FE0,
+
+        clientfield_local_checksum = 0x56BA9B0,
     };
 
     enum class asset_type : uint32_t
@@ -955,6 +963,30 @@ namespace engine
     typedef void*(__fastcall* steam_frame_callback_t)();
 
     inline steam_frame_callback_t steam_frame_callback_fn = nullptr;
+
+    typedef void(__fastcall* lod_params_reader_t)(void* view, int* cam_pos, int* flags, void* out_params);
+
+    inline lod_params_reader_t lod_params_reader_fn = nullptr;
+
+    static constexpr size_t lod_params_scale_offset = 16;
+
+    static constexpr size_t lod_params_limit_offset = 32;
+
+    static constexpr size_t lod_params_cull_offset = 36;
+
+    static constexpr float lod_scale_boost = 4.0f;
+
+    static constexpr float lod_cull_disabled = -1.0f;
+
+    typedef int64_t(__fastcall* resident_mip_request_t)(int64_t a1, int a2, int64_t a3);
+
+    inline resident_mip_request_t resident_mip_request_fn = nullptr;
+
+    static constexpr int resident_mip_floor = 7;
+
+    typedef char(__fastcall* clientfield_checksum_t)(int server_checksum);
+
+    inline clientfield_checksum_t clientfield_checksum_fn = nullptr;
 
     typedef int64_t(__fastcall* apply_game_state_t)(uint32_t a1, int64_t a2, int64_t a3, int64_t message);
 
