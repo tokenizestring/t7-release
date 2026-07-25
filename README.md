@@ -50,7 +50,6 @@ Every host→client server command is validated before the game processes it (an
 - `callvote` — clamps and sanitizes oversized vote strings.
 - `presence` — clamps the LivePresence player count to stop the serialize overflow.
 - `paragon` — guards the malformed paragon-icon scoreboard lookup.
-- `menu` — de-dupes repeated `OpenMenu` calls, killing the GSC pause-menu spam crash that exhausts the LUI element pool.
 
 **Privacy**
 
@@ -62,6 +61,8 @@ Every host→client server command is validated before the game processes it (an
 
 - `video` — F1 skips in-game cutscenes (hooks the cinematic loader so they never start; menu backgrounds are untouched).
 - `steamqol` — caches DLC/app install queries and throttles the friend-list rebuild, killing the Steam-IPC menu FPS hitches.
+- `perf` — removes the hidden loading-screen FPS cap. Stock BO3 throttles the renderer hard while loading, so load screens crawl and stutter; with the cap gone they run smooth and fully uncapped.
+- `lod` — disables the aggressive auto-LOD-cull so nearby props/barriers stop vanishing when you back away from them.
 - `antiquit` — clears the forced menu-block branch.
 - `logo` — animated frontend banner from an embedded resource.
 
