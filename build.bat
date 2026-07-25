@@ -44,7 +44,6 @@ cl.exe /nologo /O2 /Gy /GR- /std:c++17 /EHsc /MT /W3 /LD ^
     src\dllmain.cpp ^
     src\engine\engine.cpp ^
     src\patches\crc\crc.cpp ^
-    src\patches\idahide\idahide.cpp ^
     src\patches\demonware\demonware.cpp ^
     src\patches\oob\oob.cpp ^
     src\patches\mspreload\mspreload.cpp ^
@@ -63,7 +62,6 @@ cl.exe /nologo /O2 /Gy /GR- /std:c++17 /EHsc /MT /W3 /LD ^
     src\patches\workshop\workshop.cpp ^
     src\patches\servercmd\servercmd.cpp ^
     src\patches\video\video.cpp ^
-    src\patches\menu\menu.cpp ^
     src\patches\perf\perf.cpp ^
     src\patches\lod\lod.cpp ^
     src\patches\texstream\texstream.cpp ^

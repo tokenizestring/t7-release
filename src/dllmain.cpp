@@ -6,7 +6,6 @@
 #include "utils/exceptions/exceptions.hpp"
 #include "utils/resource/resource.hpp"
 #include "patches/crc/crc.hpp"
-#include "patches/idahide/idahide.hpp"
 #include "patches/demonware/demonware.hpp"
 #include "patches/oob/oob.hpp"
 #include "patches/mspreload/mspreload.hpp"
@@ -25,7 +24,6 @@
 #include "patches/workshop/workshop.hpp"
 #include "patches/servercmd/servercmd.hpp"
 #include "patches/video/video.hpp"
-#include "patches/menu/menu.hpp"
 #include "patches/perf/perf.hpp"
 #include "patches/lod/lod.hpp"
 #include "patches/texstream/texstream.hpp"
@@ -56,8 +54,6 @@ static DWORD WINAPI main_thread(LPVOID param)
     T7_LOG(cx("start cutscene up, installing."));
 
     crc::patch();
-
-    idahide::initialize();
 
     demonware::initialize();
 
@@ -94,8 +90,6 @@ static DWORD WINAPI main_thread(LPVOID param)
     servercmd::initialize();
 
     video::initialize();
-
-    menu::initialize();
 
     perf::initialize();
 

@@ -323,6 +323,8 @@ namespace lobbymsg
                 {
                     T7_LOG(std::string(cx("lobbymsg: pull not joining from ")) + std::to_string(xuid) + cx(", dropped."));
 
+                    features::overlay::notify(cx("blocked pull attempt."), features::overlay::level::bad);
+
                     return 0;
                 }
             }

@@ -15,10 +15,6 @@ namespace lod
             char* params = reinterpret_cast<char*>(out_params);
 
             *reinterpret_cast<float*>(params + engine::lod_params_cull_offset) = engine::lod_cull_disabled;
-
-            *reinterpret_cast<float*>(params + engine::lod_params_scale_offset) *= engine::lod_scale_boost;
-
-            *reinterpret_cast<int*>(params + engine::lod_params_limit_offset) = 0;
         }
     }
 
