@@ -27,11 +27,13 @@ Copy-Item $src $asset -Force
 $notes = "Automated build. Drop d3d11.dll next to BlackOps3.exe (it proxies the real d3d11)."
 
 if ($tag -eq "latest") {
-    & $gh release delete $tag -R $repo --yes --cleanup-tag 2>$null
-    & $gh release create $tag $asset -R $repo --target main --title $title --notes $notes
-} else {
-    & $gh release create $tag $asset -R $repo --target main --title $title --notes $notes
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    & $gh release delete $tag -R $repo --yes --cleanup-tag 2>&1 | Out-Null
+    $ErrorActionPreference = $prev
 }
+
+& $gh release create $tag $asset -R $repo --target main --title $title --notes $notes
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "released $tag with d3d11.dll -> https://github.com/$repo/releases/tag/$tag"
