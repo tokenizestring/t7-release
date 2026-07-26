@@ -10,11 +10,21 @@ namespace lod
     {
         engine::lod_params_reader_fn(view, cam_pos, flags, out_params);
 
-        if (out_params != nullptr)
+        if (!engine::lod_enabled || out_params == nullptr || flags == nullptr)
         {
-            char* params = reinterpret_cast<char*>(out_params);
+            return;
+        }
 
-            *reinterpret_cast<float*>(params + engine::lod_params_cull_offset) = engine::lod_cull_disabled;
+        if ((*flags & engine::lod_shadow_reflection_mask) != 0)
+        {
+            return;
+        }
+
+        float* cull = reinterpret_cast<float*>(reinterpret_cast<char*>(out_params) + engine::lod_params_cull_offset);
+
+        if (*cull > 0.0f)
+        {
+            *cull *= engine::lod_cull_multiplier;
         }
     }
 
@@ -24,6 +34,6 @@ namespace lod
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::lod_params_reader_fn), hk_lod_params);
 
-        T7_LOG(cx("lod: auto-cull disabled + lod scale boosted (no pop-in)."));
+        T7_LOG(cx("lod: cull radius extended (less pop-in)."));
     }
 }

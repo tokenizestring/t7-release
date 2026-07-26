@@ -52,7 +52,7 @@ namespace infoleak
     {
         const engine::netadr_s* dest = static_cast<const engine::netadr_s*>(to);
 
-        if (dest != nullptr && dest->type == engine::netadr_type_raw_udp)
+        if (engine::protection.info_leak && dest != nullptr && dest->type == engine::netadr_type_raw_udp)
         {
             uint64_t self = static_cast<uint64_t>(engine::user_xuid(0));
 

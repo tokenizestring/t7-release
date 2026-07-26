@@ -162,6 +162,20 @@ namespace engine
 
         cg_server_command = 0xF755E0,
 
+        client_command = 0x193DFC0,
+
+        client_mrp = 0x195EFA0,
+
+        sv_cmd_argv_buffer = 0x20E2FD0,
+
+        pmove = 0x26200C0,
+
+        client_match_bitmask = 0x13E3B10,
+
+        lobby_disconnect_event = 0x1EE3C10,
+
+        localize_lookup = 0x221D280,
+
         cg_message_format = 0x814150,
 
         cmd_get_argv = 0xACA00,
@@ -222,6 +236,10 @@ namespace engine
 
         resident_mip_request = 0x1CFA3B0,
 
+        stream_throttle = 0x1D04BA0,
+
+        stream_frame_budget = 0x32FACC8,
+
         frame_fps_cap = 0xF7CFD0,
 
         lua_get_vm = 0x1F05920,
@@ -239,6 +257,8 @@ namespace engine
         clientfield_checksum_validate = 0x843FE0,
 
         clientfield_local_checksum = 0x56BA9B0,
+
+        validate_auth_response = 0x1EAB190,
     };
 
     enum class asset_type : uint32_t
@@ -978,11 +998,72 @@ namespace engine
 
     static constexpr float lod_cull_disabled = -1.0f;
 
+    static constexpr float lod_cull_multiplier = 3.0f;
+
+    static constexpr int lod_shadow_reflection_mask = 0x38000000;
+
     typedef int64_t(__fastcall* resident_mip_request_t)(int64_t a1, int a2, int64_t a3);
 
     inline resident_mip_request_t resident_mip_request_fn = nullptr;
 
     static constexpr int resident_mip_floor = 7;
+
+    typedef int64_t(__fastcall* stream_throttle_t)(char a1, int64_t a2, int64_t a3);
+
+    inline stream_throttle_t stream_throttle_fn = nullptr;
+
+    static constexpr int stream_budget_boost = 16;
+
+    struct protection_settings
+    {
+        bool server_commands = true;
+
+        bool connectionless = true;
+
+        bool lobby_messages = true;
+
+        bool demonware = true;
+
+        bool netchan_guards = true;
+
+        bool markup_text = true;
+
+        bool side_load = true;
+
+        bool vote_strings = true;
+
+        bool player_presence = true;
+
+        bool paragon_icons = true;
+
+        bool p2p_userdata = true;
+
+        bool info_leak = true;
+
+        bool workshop_mods = true;
+    };
+
+    inline protection_settings protection;
+
+    inline bool notifications_enabled = true;
+
+    inline bool block_p2p = false;
+
+    inline bool block_netchan = false;
+
+    inline bool lod_enabled = true;
+
+    inline bool texstream_enabled = true;
+
+    inline bool movement_tick_enabled = false;
+
+    inline int movement_tick_ms = 8;
+
+    inline bool allow_all_auth = true;
+
+    typedef int64_t(__fastcall* validate_auth_response_t)(int64_t self, uint32_t* response);
+
+    inline validate_auth_response_t validate_auth_response_fn = nullptr;
 
     typedef char(__fastcall* clientfield_checksum_t)(int server_checksum);
 
@@ -995,6 +1076,34 @@ namespace engine
     typedef int64_t(__fastcall* get_server_command_t)(uint32_t local_client, int32_t sequence);
 
     inline get_server_command_t get_server_command_fn = nullptr;
+
+    typedef int64_t(__fastcall* client_match_bitmask_t)(int64_t session, int index);
+
+    inline client_match_bitmask_t client_match_bitmask_fn = nullptr;
+
+    typedef int64_t(__fastcall* client_command_t)(uint32_t client_num);
+
+    inline client_command_t client_command_fn = nullptr;
+
+    typedef int64_t(__fastcall* client_mrp_t)(int64_t entity);
+
+    inline client_mrp_t client_mrp_fn = nullptr;
+
+    typedef void(__fastcall* sv_cmd_argv_buffer_t)(int index, char* buffer, int size);
+
+    inline sv_cmd_argv_buffer_t sv_cmd_argv_buffer_fn = nullptr;
+
+    typedef int64_t(__fastcall* pmove_t)(int64_t pmove);
+
+    inline pmove_t pmove_fn = nullptr;
+
+    typedef int64_t(__fastcall* lobby_disconnect_event_t)(uint32_t* a1, int64_t a2, uint32_t a3, int64_t a4);
+
+    inline lobby_disconnect_event_t lobby_disconnect_event_fn = nullptr;
+
+    typedef int64_t(__fastcall* localize_lookup_t)(int64_t key);
+
+    inline localize_lookup_t localize_lookup_fn = nullptr;
 
     typedef int64_t(__fastcall* cg_server_command_t)(uint32_t local_client);
 
@@ -1086,7 +1195,7 @@ namespace engine
 
     static constexpr int lobby_print_max_depth = 32;
 
-    inline int lobby_print_depth = 0;
+    inline thread_local int lobby_print_depth = 0;
 
     inline uint64_t lobby_print_blocked = 0;
 

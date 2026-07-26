@@ -61,14 +61,17 @@ cl.exe /nologo /O2 /Gy /GR- /std:c++17 /EHsc /MT /W3 /LD ^
     src\patches\hotkeys\hotkeys.cpp ^
     src\patches\workshop\workshop.cpp ^
     src\patches\servercmd\servercmd.cpp ^
+    src\patches\clientcmd\clientcmd.cpp ^
     src\patches\video\video.cpp ^
     src\patches\perf\perf.cpp ^
     src\patches\lod\lod.cpp ^
     src\patches\texstream\texstream.cpp ^
+    src\patches\movement\movement.cpp ^
     src\features\logo\logo.cpp ^
     src\features\overlay\font.cpp ^
     src\features\overlay\renderer.cpp ^
     src\features\overlay\overlay.cpp ^
+    src\menu\menu.cpp ^
     src\utils\hook\hook.cpp ^
     src\utils\hook\lde.cpp ^
     src\utils\log\log.cpp ^

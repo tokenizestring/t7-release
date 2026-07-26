@@ -9,13 +9,11 @@
 
 namespace workshop
 {
-    static bool block_enabled = true;
-
     static bool toggle_latch = false;
 
     static int64_t __fastcall hk_apply_game_state(uint32_t a1, int64_t a2, int64_t a3, int64_t message)
     {
-        if (block_enabled && message != 0)
+        if (engine::protection.workshop_mods && message != 0)
         {
             engine::lobby_state_msg_s* state = reinterpret_cast<engine::lobby_state_msg_s*>(message);
 
@@ -55,9 +53,9 @@ namespace workshop
         {
             toggle_latch = true;
 
-            block_enabled = !block_enabled;
+            engine::protection.workshop_mods = !engine::protection.workshop_mods;
 
-            if (block_enabled) T7_LOG(cx("workshop: enabled - host-forced ugc blocked."));
+            if (engine::protection.workshop_mods) T7_LOG(cx("workshop: enabled - host-forced ugc blocked."));
             else T7_LOG(cx("workshop: disabled - host-forced ugc allowed."));
         }
         else if (!down)

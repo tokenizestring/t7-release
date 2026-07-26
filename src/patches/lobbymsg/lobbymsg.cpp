@@ -60,7 +60,7 @@ namespace lobbymsg
 
         auto& cap = array_cap();
 
-        if (present != 0 && lobby_msg != nullptr && lobby_msg->mode == 2 && ++cap.count > cap.limit)
+        if (engine::protection.lobby_messages && present != 0 && lobby_msg != nullptr && lobby_msg->mode == 2 && ++cap.count > cap.limit)
         {
             if (cap.count == cap.limit + 1)
             {
@@ -251,6 +251,11 @@ namespace lobbymsg
 
     static int64_t __fastcall hk_handle_packet_internal(uint32_t controller_index, void* adr, uint64_t xuid, int64_t lobby_type, int role, void* msg)
     {
+        if (!engine::protection.lobby_messages)
+        {
+            return engine::handle_packet_internal(controller_index, adr, xuid, lobby_type, role, msg);
+        }
+
         engine::lobby_msg_s lobby_msg = {};
 
         engine::lobby_prep_read_msg(&lobby_msg, msg);
@@ -336,7 +341,7 @@ namespace lobbymsg
 
     static int64_t __fastcall hk_lobby_print_debug(int64_t msg)
     {
-        if (engine::lobby_print_depth >= engine::lobby_print_max_depth)
+        if (engine::protection.lobby_messages && engine::lobby_print_depth >= engine::lobby_print_max_depth)
         {
             if (msg != 0)
             {

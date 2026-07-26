@@ -13,7 +13,14 @@ static HMODULE game_module = nullptr;
 static uintptr_t game_base = 0;
 static uintptr_t game_end = 0;
 
+static uintptr_t self_base = 0;
+static uintptr_t self_end = 0;
+
 static std::ofstream exception_file;
+
+static CRITICAL_SECTION dump_lock;
+
+static bool dump_lock_ready = false;
 
 static void emit(const std::string& line)
 {
@@ -87,7 +94,34 @@ static void dump_registers(CONTEXT* ctx)
     emit("  rip=" + to_hex(ctx->Rip));
 }
 
-static void dump_stack(CONTEXT* ctx)
+static void dump_raw_stack(CONTEXT* ctx)
+{
+    emit("  raw stack (code return addresses, game / d3d11 only):");
+
+    uintptr_t rsp = ctx->Rsp;
+
+    int found = 0;
+
+    for (uintptr_t offset = 0; offset < 0x8000 && found < 80; offset += 8)
+    {
+        uintptr_t value = *reinterpret_cast<uintptr_t*>(rsp + offset);
+
+        if (value >= game_base && value < game_end)
+        {
+            emit("    +" + to_hex(offset) + " game+" + to_hex(value - game_base));
+
+            found++;
+        }
+        else if (value >= self_base && value < self_end)
+        {
+            emit("    +" + to_hex(offset) + " d3d11+" + to_hex(value - self_base));
+
+            found++;
+        }
+    }
+}
+
+static int dump_stack(CONTEXT* ctx)
 {
     STACKFRAME64 frame = {};
 
@@ -101,6 +135,8 @@ static void dump_stack(CONTEXT* ctx)
     CONTEXT ctx_copy = *ctx;
 
     emit("  stack:");
+
+    int count = 0;
 
     for (int i = 0; i < 16; i++)
     {
@@ -148,7 +184,11 @@ static void dump_stack(CONTEXT* ctx)
                 emit("    [" + std::to_string(i) + "] " + to_hex(addr));
             }
         }
+
+        count++;
     }
+
+    return count;
 }
 
 static LONG WINAPI handler(EXCEPTION_POINTERS* info)
@@ -164,6 +204,22 @@ static LONG WINAPI handler(EXCEPTION_POINTERS* info)
     {
         return EXCEPTION_CONTINUE_SEARCH;
     }
+
+    if (code == 0xE06D7363)
+    {
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+
+    static thread_local bool in_handler = false;
+
+    if (in_handler || !dump_lock_ready)
+    {
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+
+    in_handler = true;
+
+    EnterCriticalSection(&dump_lock);
 
     uintptr_t fault_addr = reinterpret_cast<uintptr_t>(info->ExceptionRecord->ExceptionAddress);
 
@@ -202,13 +258,29 @@ static LONG WINAPI handler(EXCEPTION_POINTERS* info)
 
     dump_registers(info->ContextRecord);
 
-    dump_stack(info->ContextRecord);
+    if (code == EXCEPTION_STACK_OVERFLOW)
+    {
+        dump_raw_stack(info->ContextRecord);
+    }
+    else
+    {
+        int frames = dump_stack(info->ContextRecord);
+
+        if (frames < 4)
+        {
+            dump_raw_stack(info->ContextRecord);
+        }
+    }
 
     emit("--- END EXCEPTION ---");
 
     exception_file.close();
 
     utils::log::write(std::string(cx("exception: ")) + code_name(code) + cx(" logged to exceptions/") + name);
+
+    LeaveCriticalSection(&dump_lock);
+
+    in_handler = false;
 
     return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -225,7 +297,26 @@ namespace utils::exceptions
 
         game_end = game_base + nt->OptionalHeader.SizeOfImage;
 
+        HMODULE self = nullptr;
+
+        GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCSTR>(&game_base), &self);
+
+        if (self != nullptr)
+        {
+            self_base = reinterpret_cast<uintptr_t>(self);
+
+            PIMAGE_DOS_HEADER self_dos = reinterpret_cast<PIMAGE_DOS_HEADER>(self_base);
+
+            PIMAGE_NT_HEADERS self_nt = reinterpret_cast<PIMAGE_NT_HEADERS>(self_base + self_dos->e_lfanew);
+
+            self_end = self_base + self_nt->OptionalHeader.SizeOfImage;
+        }
+
         SymInitialize(GetCurrentProcess(), nullptr, TRUE);
+
+        InitializeCriticalSection(&dump_lock);
+
+        dump_lock_ready = true;
 
         AddVectoredExceptionHandler(1, handler);
 

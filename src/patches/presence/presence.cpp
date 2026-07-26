@@ -38,7 +38,7 @@ namespace presence
         {
             int count = (*packed >> 2) & 0x1F;
 
-            if (count > max_players)
+            if (engine::protection.player_presence && count > max_players)
             {
                 *packed = (*packed & ~(0x1F << 2)) | (max_players << 2);
 

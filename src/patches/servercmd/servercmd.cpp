@@ -11,6 +11,11 @@ namespace servercmd
 {
     static int64_t __fastcall hk_get_server_command(uint32_t local_client, int32_t sequence)
     {
+        if (!engine::protection.server_commands)
+        {
+            return engine::get_server_command_fn(local_client, sequence);
+        }
+
         int32_t current = engine::server_command_sequence(local_client);
 
         if (sequence <= current - engine::max_reliable_commands || sequence > current)
@@ -140,6 +145,11 @@ namespace servercmd
     // fix: let the game format into our own big scratch, then copy back only 255.
     static int64_t __fastcall hk_message_format(uint32_t local_client, const char* message, int64_t context, char* out)
     {
+        if (!engine::protection.server_commands)
+        {
+            return engine::message_format_fn(local_client, message, context, out);
+        }
+
         char scratch[2048] = {};
 
         engine::message_format_fn(local_client, message, context, scratch);
@@ -174,6 +184,11 @@ namespace servercmd
 
     static int64_t __fastcall hk_set_config_string(uint32_t local_client)
     {
+        if (!engine::protection.server_commands)
+        {
+            return engine::set_config_string_fn(local_client);
+        }
+
         uint32_t index = static_cast<uint32_t>(engine::cmd_atoi(engine::cmd_argv(1)));
 
         if (index > engine::configstring_index_max)
@@ -197,6 +212,18 @@ namespace servercmd
         return engine::set_config_string_fn(local_client);
     }
 
+    static int64_t __fastcall hk_client_match_bitmask(int64_t session, int index)
+    {
+        if (engine::protection.server_commands && (session == 0 || static_cast<uint32_t>(index) > 17))
+        {
+            features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
+
+            return 0;
+        }
+
+        return engine::client_match_bitmask_fn(session, index);
+    }
+
     void initialize()
     {
         engine::get_server_command_fn = reinterpret_cast<engine::get_server_command_t>(engine::base() + engine::cl_get_server_command);
@@ -214,6 +241,10 @@ namespace servercmd
         engine::bg_cache_checksum_fn = reinterpret_cast<engine::bg_cache_checksum_t>(engine::base() + engine::bg_cache_checksum);
 
         //utils::hook::attach(reinterpret_cast<void**>(&engine::bg_cache_checksum_fn), hk_bg_cache_checksum); need to fix, too lazy to atm, since no one is using these exploits
+
+        engine::client_match_bitmask_fn = reinterpret_cast<engine::client_match_bitmask_t>(engine::base() + engine::client_match_bitmask);
+
+        utils::hook::attach(reinterpret_cast<void**>(&engine::client_match_bitmask_fn), hk_client_match_bitmask);
 
         T7_LOG(cx("servercmd: logger + rce/crash/kick protections installed."));
     }

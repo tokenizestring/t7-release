@@ -10,12 +10,12 @@ namespace steamqol
 {
     static bool __fastcall hk_is_dlc_installed(uint32_t app_id)
     {
-        return engine::dlc_cache.query(engine::steam_is_dlc_installed_fn, app_id);
+        return true;
     }
 
     static bool __fastcall hk_is_app_installed(uint32_t app_id)
     {
-        return engine::app_cache.query(engine::steam_is_app_installed_fn, app_id);
+        return true;
     }
 
     static char __fastcall hk_friend_list_rebuild(uint32_t controller)
@@ -51,6 +51,16 @@ namespace steamqol
         return engine::dlc_progress[index].value;
     }
 
+    static int64_t __fastcall hk_validate_auth(int64_t self, uint32_t* response)
+    {
+        if (engine::allow_all_auth && response != nullptr)
+        {
+            response[2] = 0;
+        }
+
+        return engine::validate_auth_response_fn(self, response);
+    }
+
     void initialize()
     {
         engine::steam_is_dlc_installed_fn = reinterpret_cast<engine::steam_is_installed_t>(engine::base() + engine::steam_is_dlc_installed);
@@ -68,6 +78,10 @@ namespace steamqol
         engine::steam_dlc_progress_fn = reinterpret_cast<engine::steam_dlc_progress_t>(engine::base() + engine::steam_dlc_progress);
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::steam_dlc_progress_fn), hk_dlc_progress);
+
+        engine::validate_auth_response_fn = reinterpret_cast<engine::validate_auth_response_t>(engine::base() + engine::validate_auth_response);
+
+        utils::hook::attach(reinterpret_cast<void**>(&engine::validate_auth_response_fn), hk_validate_auth);
 
         T7_LOG(cx("steamqol: dlc/app + dlc-progress cache + friend-rebuild throttle installed (kills steam-ipc menu fps hitches)."));
     }

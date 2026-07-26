@@ -15,7 +15,7 @@ static char* __fastcall hk_paragon_icon_name(uint32_t mode, int icon_id)
 {
     char* result = engine::paragon_icon_name_fn(mode, icon_id);
 
-    if (engine::paragon_icon_in_table(result))
+    if (!engine::protection.paragon_icons || engine::paragon_icon_in_table(result))
     {
         return result;
     }

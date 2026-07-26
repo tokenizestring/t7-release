@@ -51,7 +51,7 @@ namespace oob
 
         *m = backup;
 
-        bool blocked = is_blocked(line);
+        bool blocked = engine::protection.connectionless && is_blocked(line);
 
         if (line[0] != 0)
         {
@@ -84,7 +84,7 @@ namespace oob
 
         *m = backup;
 
-        bool blocked = is_blocked(line);
+        bool blocked = engine::protection.connectionless && is_blocked(line);
 
         if (line[0] != 0)
         {

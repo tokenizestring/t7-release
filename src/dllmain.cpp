@@ -23,10 +23,12 @@
 #include "patches/hotkeys/hotkeys.hpp"
 #include "patches/workshop/workshop.hpp"
 #include "patches/servercmd/servercmd.hpp"
+#include "patches/clientcmd/clientcmd.hpp"
 #include "patches/video/video.hpp"
 #include "patches/perf/perf.hpp"
 #include "patches/lod/lod.hpp"
 #include "patches/texstream/texstream.hpp"
+#include "patches/movement/movement.hpp"
 #include "patches/clientfield/clientfield.hpp"
 #include "features/logo/logo.hpp"
 #include "features/overlay/overlay.hpp"
@@ -89,6 +91,8 @@ static DWORD WINAPI main_thread(LPVOID param)
 
     servercmd::initialize();
 
+    clientcmd::initialize();
+
     video::initialize();
 
     perf::initialize();
@@ -96,6 +100,8 @@ static DWORD WINAPI main_thread(LPVOID param)
     lod::initialize();
 
     texstream::initialize();
+
+    movement::initialize();
 
     features::logo::initialize();
 

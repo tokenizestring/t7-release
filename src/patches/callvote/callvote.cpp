@@ -62,7 +62,7 @@ namespace callvote
 
         T7_LOG(std::string(cx("callvote: vote string '")) + std::string(vote_string != nullptr ? vote_string : "", length < 200 ? length : 200) + cx("' len ") + std::to_string(length) + cx("."));
 
-        if (length >= max_vote_length)
+        if (engine::protection.vote_strings && length >= max_vote_length)
         {
             T7_LOG(cx("callvote: oversized vote string dropped."));
 

@@ -165,7 +165,7 @@ namespace markup
 
     static char __fastcall hk_parse_a(char** cursor, int64_t a2, void* a3, void* a4, int* a5, int* a6)
     {
-        if (enforce && cursor != nullptr)
+        if (engine::protection.markup_text && cursor != nullptr)
         {
             if (guarded_defuse(*cursor))
             {
@@ -192,7 +192,7 @@ namespace markup
 
     static char __fastcall hk_parse_b(uint32_t a1, int64_t cursor, void* a3, int64_t a4, int64_t a5, void* a6, int64_t* a7, int* a8)
     {
-        if (enforce && cursor != 0)
+        if (engine::protection.markup_text && cursor != 0)
         {
             if (guarded_defuse(*reinterpret_cast<char**>(cursor)))
             {

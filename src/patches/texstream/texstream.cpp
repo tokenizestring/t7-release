@@ -6,22 +6,22 @@
 
 namespace texstream
 {
-    static int64_t __fastcall hk_resident_mip(int64_t a1, int a2, int64_t a3)
+    static int64_t __fastcall hk_stream_throttle(char a1, int64_t a2, int64_t a3)
     {
-        if (a2 >= 0 && a2 < engine::resident_mip_floor)
+        if (engine::texstream_enabled)
         {
-            a2 = engine::resident_mip_floor;
+            *reinterpret_cast<int*>(engine::base() + engine::stream_frame_budget) = engine::stream_budget_boost;
         }
 
-        return engine::resident_mip_request_fn(a1, a2, a3);
+        return engine::stream_throttle_fn(a1, a2, a3);
     }
 
     void initialize()
     {
-        engine::resident_mip_request_fn = reinterpret_cast<engine::resident_mip_request_t>(engine::base() + engine::resident_mip_request);
+        engine::stream_throttle_fn = reinterpret_cast<engine::stream_throttle_t>(engine::base() + engine::stream_throttle);
 
-        // utils::hook::attach(reinterpret_cast<void**>(&engine::resident_mip_request_fn), hk_resident_mip); needs rework, kinda beaming textures lmao
+        utils::hook::attach(reinterpret_cast<void**>(&engine::stream_throttle_fn), hk_stream_throttle);
 
-        T7_LOG(cx("texstream: resident-mip floor raised (less texture pop-in)."));
+        T7_LOG(cx("texstream: per-frame stream budget raised (textures load in faster, no pop-in)."));
     }
 }

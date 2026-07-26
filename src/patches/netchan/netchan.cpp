@@ -11,8 +11,6 @@
 
 namespace netchan
 {
-    static bool block_enabled = false;
-
     static bool toggle_latch = false;
 
     static engine::net_send_packet_t original_net_send = nullptr;
@@ -26,7 +24,7 @@ namespace netchan
     {
         const engine::netadr_s* adr = reinterpret_cast<const engine::netadr_s*>(to);
 
-        if (block_enabled && adr != nullptr && adr->type == engine::netadr_type_raw_udp)
+        if (engine::block_netchan && adr != nullptr && adr->type == engine::netadr_type_raw_udp)
         {
             T7_LOG(std::string(cx("netchan: send ")) + std::to_string(length) + cx("b to ") + adr_string(adr) + cx(" dropped."));
 
@@ -40,7 +38,7 @@ namespace netchan
     {
         char got = engine::net_get_packet_fn(socket, a2, a3, from, max_size, out_size, out_buffer);
 
-        if (block_enabled && got != 0 && from != nullptr && from->type == engine::netadr_type_raw_udp)
+        if (engine::block_netchan && got != 0 && from != nullptr && from->type == engine::netadr_type_raw_udp)
         {
             T7_LOG(std::string(cx("netchan: recv ")) + std::to_string(out_size != nullptr ? *out_size : 0) + cx("b from ") + adr_string(from) + cx(" dropped."));
 
@@ -78,7 +76,7 @@ namespace netchan
             {
                 void* stored = reinterpret_cast<void*>(clients + engine::client_data_stride * static_cast<size_t>(client_num) + engine::client_netadr_offset);
 
-                if (reinterpret_cast<engine::net_compare_base_adr_t>(base + engine::net_compare_base_adr)(from, stored) == 0)
+                if (engine::protection.netchan_guards && reinterpret_cast<engine::net_compare_base_adr_t>(base + engine::net_compare_base_adr)(from, stored) == 0)
                 {
                     T7_LOG(std::string(cx("netchan: spoofed packet xuid ")) + std::to_string(xuid) + cx(" client ") + std::to_string(client_num) + cx(" dropped."));
 
@@ -129,7 +127,7 @@ namespace netchan
 
         bool invalid = server_id != 0 && config_string != nullptr && ((static_cast<uint8_t>(atoi(config_string)) ^ static_cast<uint8_t>(server_id)) & 0xF0) == 0;
 
-        if (invalid)
+        if (engine::protection.netchan_guards && invalid)
         {
             T7_LOG(std::string(cx("netchan: gamedata server_id=")) + std::to_string(server_id) + cx(" cs=\"") + std::string(config_string) + cx("\", dropped."));
 
@@ -170,7 +168,7 @@ namespace netchan
 
                     uint32_t length = *reinterpret_cast<uint32_t*>(node + engine::netchan_fragment_length);
 
-                    if (engine::netchan_reassemble_stride * index + length > capacity)
+                    if (engine::protection.netchan_guards && engine::netchan_reassemble_stride * index + length > capacity)
                     {
                         *reinterpret_cast<uint32_t*>(message + engine::netchan_msgbuf_error) = 1;
 
@@ -231,9 +229,9 @@ namespace netchan
         {
             toggle_latch = true;
 
-            block_enabled = !block_enabled;
+            engine::block_netchan = !engine::block_netchan;
 
-            if (block_enabled) T7_LOG(cx("netchan: enabled - raw udp blocked (breaks dedi / direct connect)."));
+            if (engine::block_netchan) T7_LOG(cx("netchan: enabled - raw udp blocked (breaks dedi / direct connect)."));
             else T7_LOG(cx("netchan: disabled - raw udp restored."));
         }
         else if (!down)

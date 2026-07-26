@@ -1,5 +1,7 @@
 #include "overlay.hpp"
 #include "renderer.hpp"
+#include "../../menu/menu.hpp"
+#include "../../engine/engine.hpp"
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
 
@@ -100,6 +102,11 @@ namespace features::overlay
 
     void notify(const std::string& text, level lvl)
     {
+        if (!engine::notifications_enabled)
+        {
+            return;
+        }
+
         std::lock_guard<std::mutex> lock(g_mutex);
 
         uint64_t now = GetTickCount64();
@@ -299,6 +306,8 @@ namespace features::overlay
         renderer::draw_text_shadow(14.0f, screen_h - renderer::line_height() - 12.0f, watermark, mark, mark_shadow);
 
         draw_toasts(screen_w);
+
+        menu::tick(screen_w, screen_h);
 
         renderer::end();
     }

@@ -17,7 +17,7 @@ namespace mspreload
         {
             const char* value = engine::get_config_string(index);
 
-            if (value != nullptr && (_strnicmp(value, "mspreload", 9) == 0 || _strnicmp(value, "msload", 6) == 0))
+            if (engine::protection.side_load && value != nullptr && (_strnicmp(value, "mspreload", 9) == 0 || _strnicmp(value, "msload", 6) == 0))
             {
                 T7_LOG(std::string(cx("mspreload: forced side-load ")) + value + cx(", dropped."));
 

@@ -7,17 +7,15 @@
 
 #include <string>
 
-static bool block_enabled = false;
-
 static bool toggle_latch = false;
 
 static char __fastcall hk_send(void* ctx, uint64_t steam_id, void* data, uint32_t size)
 {
     uint8_t type = data != nullptr ? *reinterpret_cast<uint8_t*>(data) : 0;
 
-    T7_LOG(std::string(cx("p2p: send ")) + std::to_string(size) + cx("b to ") + std::to_string(steam_id) + cx(" type ") + std::to_string(type) + (block_enabled ? cx(" dropped.") : cx(".")));
+    T7_LOG(std::string(cx("p2p: send ")) + std::to_string(size) + cx("b to ") + std::to_string(steam_id) + cx(" type ") + std::to_string(type) + (engine::block_p2p ? cx(" dropped.") : cx(".")));
 
-    if (block_enabled)
+    if (engine::block_p2p)
     {
         return 1;
     }
@@ -27,14 +25,14 @@ static char __fastcall hk_send(void* ctx, uint64_t steam_id, void* data, uint32_
 
 static int64_t __fastcall hk_dispatch(uint64_t sender, uint32_t type, void* data, int size)
 {
-    T7_LOG(std::string(cx("p2p: recv ")) + std::to_string(size) + cx("b from ") + std::to_string(sender) + cx(" type ") + std::to_string(type) + (block_enabled ? cx(" dropped.") : cx(".")));
+    T7_LOG(std::string(cx("p2p: recv ")) + std::to_string(size) + cx("b from ") + std::to_string(sender) + cx(" type ") + std::to_string(type) + (engine::block_p2p ? cx(" dropped.") : cx(".")));
 
-    if (block_enabled)
+    if (engine::block_p2p)
     {
         return 1;
     }
 
-    if (type == engine::live_userdata_type && data != nullptr)
+    if (engine::protection.p2p_userdata && type == engine::live_userdata_type && data != nullptr)
     {
         uint32_t claimed = *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(data) + 4);
 
@@ -55,7 +53,7 @@ static char __fastcall hk_accept(void* ctx, uint64_t* steam_id)
 {
     uint64_t id = steam_id != nullptr ? *steam_id : 0;
 
-    if (block_enabled)
+    if (engine::block_p2p)
     {
         T7_LOG(std::string(cx("p2p: session request from ")) + std::to_string(id) + cx(" dropped."));
 
@@ -99,9 +97,9 @@ namespace p2p
         {
             toggle_latch = true;
 
-            block_enabled = !block_enabled;
+            engine::block_p2p = !engine::block_p2p;
 
-            if (block_enabled) T7_LOG(cx("p2p: enabled - steam p2p blocked (raw-udp dedis still work)."));
+            if (engine::block_p2p) T7_LOG(cx("p2p: enabled - steam p2p blocked (raw-udp dedis still work)."));
             else T7_LOG(cx("p2p: disabled - steam p2p restored."));
         }
         else if (!down)

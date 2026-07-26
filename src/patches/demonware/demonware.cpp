@@ -19,7 +19,7 @@ namespace demonware
         {
             char type = message[1];
 
-            bool blocked = type == 'f' || type == 'e';
+            bool blocked = engine::protection.demonware && (type == 'f' || type == 'e');
 
             T7_LOG(std::string(cx("demonware: '")) + type + cx("' from ") + std::to_string(sender_id) + cx(" size ") + std::to_string(message_size) + (blocked ? cx(" dropped") : cx("")) + cx("."));
 
@@ -46,7 +46,7 @@ namespace demonware
             {
                 char type = data[5];
 
-                bool blocked = type == 'f' || type == 'e';
+                bool blocked = engine::protection.demonware && (type == 'f' || type == 'e');
 
                 T7_LOG(std::string(cx("steam(p2p): '")) + type + cx("' from ") + std::to_string(*sender_xuid) + cx(" size ") + std::to_string(*message_size) + (blocked ? cx(" dropped") : cx("")) + cx("."));
 
@@ -140,7 +140,7 @@ namespace demonware
 
         engine::build_info_response = reinterpret_cast<engine::build_info_response_t>(engine::base() + engine::dw_build_info_response);
 
-        //utils::hook::attach(reinterpret_cast<void**>(&engine::build_info_response), hk_build_info_response);
+        utils::hook::attach(reinterpret_cast<void**>(&engine::build_info_response), hk_build_info_response);
 
         T7_LOG(cx("demonware: dispatch protection installed."));
     }
