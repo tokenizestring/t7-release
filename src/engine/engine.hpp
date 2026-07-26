@@ -258,6 +258,8 @@ namespace engine
 
         clientfield_local_checksum = 0x56BA9B0,
 
+        disconnect_reason = 0x134C920,
+
         validate_auth_response = 0x1EAB190,
     };
 
@@ -1059,6 +1061,8 @@ namespace engine
 
     inline int movement_tick_ms = 8;
 
+    inline bool clientfield_fix = true;
+
     inline bool allow_all_auth = true;
 
     typedef int64_t(__fastcall* validate_auth_response_t)(int64_t self, uint32_t* response);
@@ -1068,6 +1072,10 @@ namespace engine
     typedef char(__fastcall* clientfield_checksum_t)(int server_checksum);
 
     inline clientfield_checksum_t clientfield_checksum_fn = nullptr;
+
+    typedef int64_t(__fastcall* disconnect_reason_t)(const char* reason);
+
+    inline disconnect_reason_t disconnect_reason_fn = nullptr;
 
     typedef int64_t(__fastcall* apply_game_state_t)(uint32_t a1, int64_t a2, int64_t a3, int64_t message);
 

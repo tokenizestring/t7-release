@@ -62,6 +62,7 @@ cl.exe /nologo /O2 /Gy /GR- /std:c++17 /EHsc /MT /W3 /LD ^
     src\patches\workshop\workshop.cpp ^
     src\patches\servercmd\servercmd.cpp ^
     src\patches\clientcmd\clientcmd.cpp ^
+    src\patches\clientfield\clientfield.cpp ^
     src\patches\video\video.cpp ^
     src\patches\perf\perf.cpp ^
     src\patches\lod\lod.cpp ^

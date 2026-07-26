@@ -22,10 +22,6 @@ namespace movement
             return engine::pmove_fn(pmove);
         }
 
-        // pmove is shared by client prediction AND the server sim of every player.
-        // only quantize our own player (clientNum 0 at ps+0) so remote players
-        // stay simulated vanilla and never rubber-band. on the host both the
-        // predict and server paths are clientNum 0, so they quantize identically.
         int client_num = *reinterpret_cast<int*>(ps);
 
         if (client_num != 0)
@@ -41,8 +37,6 @@ namespace movement
 
         int elapsed = real - command_time;
 
-        // big gap (spawn/teleport/level load) or nothing to do: let the engine
-        // run its normal catch-up path, don't fold it into fixed ticks.
         if (elapsed <= 0 || elapsed > 200)
         {
             return engine::pmove_fn(pmove);
@@ -57,19 +51,12 @@ namespace movement
 
         int steps = elapsed / tick;
 
-        // fixed-tick accumulator: simulate movement only in whole ~125Hz quanta
-        // and carry the sub-tick remainder to the next frame. this makes wall-run,
-        // step-up and collision behave identically at any fps (fixes wall-running
-        // dropping and getting stuck on invisible barriers at high fps, where the
-        // tiny per-frame frametime let fixed trace/collision epsilons dominate).
         int quantized = command_time + steps * tick;
 
         *server_time = quantized;
 
         int64_t result = engine::pmove_fn(pmove);
 
-        // restore the real command time so the caller's scratch pmove is intact
-        // and next frame's elapsed correctly includes the held remainder.
         *server_time = real;
 
         return result;

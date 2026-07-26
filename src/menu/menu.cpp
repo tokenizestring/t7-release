@@ -49,6 +49,7 @@ namespace menu
         { "block steam p2p", &engine::block_p2p, nullptr },
         { "block raw udp (breaks dedis)", &engine::block_netchan, nullptr },
         { "fps-safe movement (125hz)", &engine::movement_tick_enabled, nullptr },
+        { "no client/server mismatch kick", &engine::clientfield_fix, nullptr },
         { "disconnect", nullptr, action_disconnect },
     };
 

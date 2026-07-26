@@ -93,6 +93,8 @@ static DWORD WINAPI main_thread(LPVOID param)
 
     clientcmd::initialize();
 
+    clientfield::initialize();
+
     video::initialize();
 
     perf::initialize();
