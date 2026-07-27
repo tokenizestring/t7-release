@@ -297,7 +297,7 @@ namespace features::overlay
 
         renderer::begin(g_context, g_rtv, screen_w, screen_h);
 
-        const char* watermark = "t7-release";
+        const char* watermark = "reworked.cc";
 
         uint32_t mark = renderer::rgba(200, 200, 210, 90);
 
@@ -428,7 +428,7 @@ namespace features::overlay
 
         DestroyWindow(window);
 
-        notify(cx("t7-release loaded."), level::good);
+        notify(cx("reworked loaded."), level::good);
 
         T7_LOG(cx("overlay: present hook installed."));
     }

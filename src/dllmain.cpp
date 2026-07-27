@@ -31,6 +31,7 @@
 #include "patches/movement/movement.hpp"
 #include "patches/clientfield/clientfield.hpp"
 #include "features/logo/logo.hpp"
+#include "features/menulogo/menulogo.hpp"
 #include "features/overlay/overlay.hpp"
 
 static DWORD WINAPI main_thread(LPVOID param)
@@ -107,6 +108,8 @@ static DWORD WINAPI main_thread(LPVOID param)
 
     features::logo::initialize();
 
+    features::menulogo::initialize();
+
     features::overlay::initialize();
 
     while (true)
@@ -122,6 +125,8 @@ static DWORD WINAPI main_thread(LPVOID param)
         workshop::tick();
 
         features::logo::tick();
+
+        features::menulogo::tick();
 
         Sleep(16);
     }

@@ -39,6 +39,8 @@ namespace overlay::renderer
 
     static ID3D11PixelShader* g_ps = nullptr;
 
+    static ID3D11PixelShader* g_ps_image = nullptr;
+
     static ID3D11InputLayout* g_layout = nullptr;
 
     static ID3D11Buffer* g_vertex_buffer = nullptr;
@@ -58,6 +60,21 @@ namespace overlay::renderer
     static uint32_t g_vertex_capacity = 0;
 
     static std::vector<vertex> g_vertices;
+
+    struct image_command
+    {
+        float x;
+
+        float y;
+
+        float w;
+
+        float h;
+
+        ID3D11ShaderResourceView* srv;
+    };
+
+    static std::vector<image_command> g_images;
 
     static float g_screen_w = 0.0f;
 
@@ -81,6 +98,10 @@ namespace overlay::renderer
         "float4 ps_main(ps_in i) : SV_TARGET {\n"
         "    float a = tex.Sample(smp, i.uv).r;\n"
         "    return float4(i.col.rgb, i.col.a * a);\n"
+        "}\n"
+        "float4 ps_image(ps_in i) : SV_TARGET {\n"
+        "    float4 c = tex.Sample(smp, i.uv);\n"
+        "    return c * i.col;\n"
         "}\n";
 
     uint32_t rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
@@ -183,6 +204,27 @@ namespace overlay::renderer
         if (ok)
         {
             ok = SUCCEEDED(g_device->CreatePixelShader(ps_blob->GetBufferPointer(), ps_blob->GetBufferSize(), nullptr, &g_ps));
+        }
+
+        if (ok)
+        {
+            ID3DBlob* image_blob = nullptr;
+
+            if (SUCCEEDED(D3DCompile(shader_source, strlen(shader_source), nullptr, nullptr, nullptr, "ps_image", "ps_4_0", 0, 0, &image_blob, &errors)))
+            {
+                ok = SUCCEEDED(g_device->CreatePixelShader(image_blob->GetBufferPointer(), image_blob->GetBufferSize(), nullptr, &g_ps_image));
+
+                image_blob->Release();
+            }
+            else
+            {
+                if (errors != nullptr)
+                {
+                    errors->Release();
+                }
+
+                ok = false;
+            }
         }
 
         if (ok)
@@ -363,6 +405,8 @@ namespace overlay::renderer
         g_screen_h = screen_h;
 
         g_vertices.clear();
+
+        g_images.clear();
     }
 
     static void push_quad(float x, float y, float w, float h, const overlay::font::glyph& src, uint32_t color)
@@ -391,6 +435,18 @@ namespace overlay::renderer
     void draw_rect(float x, float y, float w, float h, uint32_t color)
     {
         push_quad(x, y, w, h, font::white_texel(), color);
+    }
+
+    void draw_image(float x, float y, float w, float h, ID3D11ShaderResourceView* srv)
+    {
+        if (srv == nullptr)
+        {
+            return;
+        }
+
+        image_command command = { x, y, w, h, srv };
+
+        g_images.push_back(command);
     }
 
     void draw_text(float x, float y, const char* text, uint32_t color)
@@ -560,19 +616,21 @@ namespace overlay::renderer
         if (backup.depth_target != nullptr) { backup.depth_target->Release(); }
     }
 
-    void end()
+    static void draw_image_command(const image_command& command)
     {
-        if (!g_ready || g_context == nullptr || g_target == nullptr || g_vertices.empty())
-        {
-            return;
-        }
+        vertex quad[6];
 
-        uint32_t count = static_cast<uint32_t>(g_vertices.size());
+        quad[0] = { command.x, command.y, 0.0f, 0.0f, 0xFFFFFFFF };
 
-        if (!ensure_vertex_buffer(count))
-        {
-            return;
-        }
+        quad[1] = { command.x + command.w, command.y, 1.0f, 0.0f, 0xFFFFFFFF };
+
+        quad[2] = { command.x, command.y + command.h, 0.0f, 1.0f, 0xFFFFFFFF };
+
+        quad[3] = quad[2];
+
+        quad[4] = quad[1];
+
+        quad[5] = { command.x + command.w, command.y + command.h, 1.0f, 1.0f, 0xFFFFFFFF };
 
         D3D11_MAPPED_SUBRESOURCE mapped = {};
 
@@ -581,9 +639,46 @@ namespace overlay::renderer
             return;
         }
 
-        memcpy(mapped.pData, g_vertices.data(), count * sizeof(vertex));
+        memcpy(mapped.pData, quad, sizeof(quad));
 
         g_context->Unmap(g_vertex_buffer, 0);
+
+        g_context->PSSetShader(g_ps_image, nullptr, 0);
+
+        g_context->PSSetShaderResources(0, 1, &command.srv);
+
+        g_context->Draw(6, 0);
+    }
+
+    void end()
+    {
+        if (!g_ready || g_context == nullptr || g_target == nullptr || (g_vertices.empty() && g_images.empty()))
+        {
+            return;
+        }
+
+        uint32_t count = static_cast<uint32_t>(g_vertices.size());
+
+        uint32_t needed = count < 6 ? 6 : count;
+
+        if (!ensure_vertex_buffer(needed))
+        {
+            return;
+        }
+
+        if (count > 0)
+        {
+            D3D11_MAPPED_SUBRESOURCE mapped = {};
+
+            if (FAILED(g_context->Map(g_vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+            {
+                return;
+            }
+
+            memcpy(mapped.pData, g_vertices.data(), count * sizeof(vertex));
+
+            g_context->Unmap(g_vertex_buffer, 0);
+        }
 
         D3D11_MAPPED_SUBRESOURCE cmapped = {};
 
@@ -652,11 +747,21 @@ namespace overlay::renderer
 
         g_context->OMSetRenderTargets(1, &g_target, nullptr);
 
-        g_context->Draw(count, 0);
+        if (count > 0)
+        {
+            g_context->Draw(count, 0);
+        }
+
+        for (const image_command& command : g_images)
+        {
+            draw_image_command(command);
+        }
 
         restore_state(backup);
 
         g_vertices.clear();
+
+        g_images.clear();
     }
 
     void shutdown()
@@ -666,6 +771,8 @@ namespace overlay::renderer
         if (g_vs != nullptr) { g_vs->Release(); g_vs = nullptr; }
 
         if (g_ps != nullptr) { g_ps->Release(); g_ps = nullptr; }
+
+        if (g_ps_image != nullptr) { g_ps_image->Release(); g_ps_image = nullptr; }
 
         if (g_layout != nullptr) { g_layout->Release(); g_layout = nullptr; }
 

@@ -45,14 +45,14 @@ namespace clientfield
 
     void initialize()
     {
-        engine::clientfield_checksum_fn = reinterpret_cast<engine::clientfield_checksum_t>(engine::base() + engine::clientfield_checksum_validate);
+        /*engine::clientfield_checksum_fn = reinterpret_cast<engine::clientfield_checksum_t>(engine::base() + engine::clientfield_checksum_validate);
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::clientfield_checksum_fn), hk_clientfield_checksum);
 
         engine::disconnect_reason_fn = reinterpret_cast<engine::disconnect_reason_t>(engine::base() + engine::disconnect_reason);
 
-        utils::hook::attach(reinterpret_cast<void**>(&engine::disconnect_reason_fn), hk_disconnect_reason);
+        utils::hook::attach(reinterpret_cast<void**>(&engine::disconnect_reason_fn), hk_disconnect_reason);*/
 
-        T7_LOG(cx("clientfield: mismatch self-kick guard installed (checksum + disconnect-reason chokepoint)."));
+        // testing not currently working T7_LOG(cx("clientfield: mismatch self-kick guard installed (checksum + disconnect-reason chokepoint)."));
     }
 }

@@ -18,6 +18,8 @@ namespace overlay::renderer
 
     void draw_rect(float x, float y, float w, float h, uint32_t color);
 
+    void draw_image(float x, float y, float w, float h, ID3D11ShaderResourceView* srv);
+
     void draw_text(float x, float y, const char* text, uint32_t color);
 
     void draw_text_shadow(float x, float y, const char* text, uint32_t color, uint32_t shadow);

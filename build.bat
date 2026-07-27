@@ -69,6 +69,7 @@ cl.exe /nologo /O2 /Gy /GR- /std:c++17 /EHsc /MT /W3 /LD ^
     src\patches\texstream\texstream.cpp ^
     src\patches\movement\movement.cpp ^
     src\features\logo\logo.cpp ^
+    src\features\menulogo\menulogo.cpp ^
     src\features\overlay\font.cpp ^
     src\features\overlay\renderer.cpp ^
     src\features\overlay\overlay.cpp ^

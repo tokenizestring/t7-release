@@ -261,6 +261,26 @@ namespace engine
         disconnect_reason = 0x134C920,
 
         validate_auth_response = 0x1EAB190,
+
+        lobby_session = 0x155F6520,
+
+        keycatcher = 0x5359BC4,
+
+        cursor_visible_flag = 0x1795D25C,
+
+        clear_held_input = 0x12F34F0,
+
+        current_mode_index = 0x20EAC70,
+
+        is_local_player = 0x1EBAD60,
+
+        voip_status = 0x1EF2590,
+
+        menu_input_mode = 0x1F1FD00,
+
+        key_event = 0x1340DC0,
+
+        mouse_move = 0x12FF8E0,
     };
 
     enum class asset_type : uint32_t
@@ -1062,6 +1082,58 @@ namespace engine
     inline int movement_tick_ms = 8;
 
     inline bool clientfield_fix = true;
+
+    inline constexpr int lobby_session_stride = 10840;
+
+    inline constexpr int lobby_member_array = 248;
+
+    inline constexpr int lobby_member_stride = 48;
+
+    inline constexpr int lobby_member_client = 8;
+
+    inline constexpr int lobby_client_xuid = 1040;
+
+    inline constexpr int lobby_client_gamertag = 1048;
+
+    inline constexpr int lobby_client_clantag = 8;
+
+    inline constexpr int lobby_client_rank = 14;
+
+    inline constexpr int lobby_client_mode_stride = 6;
+
+    inline constexpr int lobby_session_host_xuid = 96;
+
+    inline constexpr int lobby_session_leader_xuid = 232;
+
+    inline constexpr int lobby_client_conn = 1080;
+
+    inline constexpr int conn_ip = 32;
+
+    inline constexpr int conn_port = 164;
+
+    inline constexpr int conn_nat = 168;
+
+    inline constexpr int lobby_client_flags = 460;
+
+    inline constexpr int lobby_client_ping_band = 1092;
+
+    typedef void(__fastcall* clear_input_t)(int local_client);
+
+    typedef int(__fastcall* mode_index_t)();
+
+    typedef char(__fastcall* is_local_t)(uint64_t xuid);
+
+    typedef char(__fastcall* voip_status_t)(void* client, int mode);
+
+    typedef void(__fastcall* menu_input_mode_t)(int local_client, char enable);
+
+    typedef void(__fastcall* key_event_t)(uint32_t local_client, uint32_t key);
+
+    inline key_event_t key_event_fn = nullptr;
+
+    typedef int64_t(__fastcall* mouse_move_t)(uint32_t local_client, uint32_t a2, uint32_t a3, int dx, int dy);
+
+    inline mouse_move_t mouse_move_fn = nullptr;
 
     inline bool allow_all_auth = true;
 
