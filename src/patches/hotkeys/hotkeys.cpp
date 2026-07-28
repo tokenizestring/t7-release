@@ -11,6 +11,8 @@ namespace hotkeys
 
     static bool disable_cutscenes_latch = false;
 
+    static bool launch_latch = false;
+
     static void* __fastcall hk_frame_callback()
     {
         void* result = engine::steam_frame_callback_fn();
@@ -46,6 +48,24 @@ namespace hotkeys
             disable_cutscenes_latch = false;
         }
 
+        bool launch_down = (GetAsyncKeyState(VK_F5) & 0x8000) != 0;
+
+        if (launch_down && !launch_latch)
+        {
+            launch_latch = true;
+
+            if (engine::cbuf_add_text_fn != nullptr)
+            {
+                engine::cbuf_add_text_fn(0, cx("launchGame; party_minplayers 1; lobby_setmap mp_nuketown_x; launchGame;").c_str());
+
+                T7_LOG(cx("hotkeys: F5 launch host match."));
+            }
+        }
+        else if (!launch_down)
+        {
+            launch_latch = false;
+        }
+
         return result;
     }
 
@@ -55,6 +75,8 @@ namespace hotkeys
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::steam_frame_callback_fn), hk_frame_callback);
 
-        T7_LOG(cx("hotkeys: F1 toggle disable cutscenes, F2 disconnect (main-thread frame hook)."));
+        engine::cbuf_add_text_fn = reinterpret_cast<engine::cbuf_add_text_t>(engine::base() + engine::cbuf_add_text);
+
+        T7_LOG(cx("hotkeys: F1 cutscenes, F2 disconnect, F5 launch (main-thread frame hook)."));
     }
 }

@@ -41,6 +41,10 @@ namespace engine
 
         steam_networking = 0x10B3DC50,
 
+        steam_matchmaking = 0x10B3DC30,
+
+        steam_friends = 0x10B3DC20,
+
         cl_connectionless_cmd = 0x134CD70,
 
         sv_connectionless_cmd = 0x21F7990,
@@ -100,7 +104,11 @@ namespace engine
 
         lobby_print_debug = 0x1EEA680,
 
+        lobby_print_array = 0x1EEA5E0,
+
         lobby_print_message = 0x1EEA940,
+
+        msg_write_byte = 0x20FF3C0,
 
         lobby_prep_read = 0x1EEA520,
 
@@ -135,6 +143,8 @@ namespace engine
         lobby_pkg_ushort = 0x1EEA4B0,
 
         lobby_pkg_data = 0x1EEA3B0,
+
+        lobby_pkg_float = 0x1EEA390,
 
         lobby_apply_game_state = 0x1EC7110,
 
@@ -281,6 +291,126 @@ namespace engine
         key_event = 0x1340DC0,
 
         mouse_move = 0x12FF8E0,
+
+        net_out_of_band_print = 0x211B310,
+
+        net_out_of_band_data = 0x211B200,
+
+        lobby_prep_write = 0x1EEA560,
+
+        lobby_frame_send = 0x1EEC470,
+
+        lobby_channel_for = 0x1EECE60,
+
+        lobby_session_getter = 0x1EC1650,
+
+        lobby_client_resolve = 0x1EF2240,
+
+        lobby_frame_send_addr = 0x1EEC740,
+
+        notetrack_anim_lookup = 0x22C9650,
+
+        lobby_handle_join_request = 0x1ED2CC0,
+
+        lobby_handle_member_info = 0x1EDB660,
+
+        lobby_msg_join_package = 0x1ED5DC0,
+
+        lobby_send_join_response = 0x1ED41D0,
+
+        lobby_netchan_get_global_channel = 0x1EECE30,
+
+        lobby_host_session_get_lobby_state = 0x1ED0A40,
+
+        lobby_session_get_max_clients = 0x1EF4450,
+
+        lobby_session_get_client_count = 0x1EF4030,
+
+        lobby_host_add_joining_client = 0x1ECAF00,
+
+        lobby_msg_package_glob = 0x1EEA3B0,
+
+        msg_fixed_client_info_package = 0x1ED8E60,
+
+        msg_mutable_client_info_package = 0x1EC8400,
+
+        network_mode_global = 0x156CE31C,
+
+        main_mode_global = 0x156CE320,
+
+        lobby_host_update_matchmaking_session = 0x1ECE840,
+
+        lobby_set_matchmaking_info = 0x1EEE1D0,
+
+        lobby_host_data_get_session = 0x1ED0AA0,
+
+        lobby_qos_listener_enable = 0x1E8BE70,
+
+        live_session_update = 0x1E8B8B0,
+
+        live_session_task_def = 0x2FA2D38,
+
+        live_session_success_callback = 0x1EEDC40,
+
+        lobby_online_state = 0x15B19C30,
+
+        live_matchmaking_info = 0x15B19C38,
+
+        live_storage_get_ffotd_version = 0x1EB7D40,
+
+        playlist_get_version_number = 0x2237670,
+
+        lobby_session_set_max_clients = 0x1EF5B10,
+
+        lobby_host_task_search = 0x1ED80C0,
+
+        live_can_host_server = 0x1DFF3A0,
+
+        qos_location_table = 0x11392050,
+
+        qos_location_count = 0x11391E7C,
+
+        bd_session_id_serialize = 0x28919F0,
+
+        bd_byte_buffer_write_uint32 = 0x2886DC0,
+
+        dedicated_session_flag = 0x2891E3C,
+
+        bd_session_id_serialize_return = 0x2891E57,
+
+        cbuf_add_text = 0x20DFF50,
+
+        lobby_online_create_session = 0x1EEDF30,
+
+        allocate_structs = 0x2BCB1FC,
+
+        matchmaking_info_ctor = 0x144CA20,
+
+        matchmaking_thing_ctor = 0x1438980,
+
+        lobby_search_session = 0x1EF0440,
+
+        demonware_fetching_done = 0x1E01340,
+
+        demonware_signed_in = 0x1EBABF0,
+
+        bd_matchmaking_find_sessions = 0x2891C40,
+
+        send_join_lobby_to_adr = 0x1ED40F0,
+
+        content_get_enabled_content_packs = 0x20F3F60,
+
+        msg_crc_net_field_checksum = 0x2100A50,
+
+        dw_register_sec_id_and_key = 0x143E140,
+
+        dw_common_addr_to_netadr = 0x143C380,
+
+        dw_netadr_to_common_addr = 0x143DA80,
+
+        msg_lobby_state_package = 0x1EC8F20,
+
+        send_join_member_info_to_adr = 0x1ED8680,
     };
 
     enum class asset_type : uint32_t
@@ -630,6 +760,266 @@ namespace engine
 
     const netadr_s* lobby_host_netadr(void* lobby);
 
+    void* active_lobby();
+
+    void* lobby_member_xnaddr(void* lobby, uint64_t xuid);
+
+    enum lobby_network_mode_e : int32_t
+    {
+        lobby_network_mode_local = 0,
+
+        lobby_network_mode_lan = 1,
+
+        lobby_network_mode_live = 2,
+    };
+
+    enum lobby_main_mode_e : int32_t
+    {
+        lobby_main_mode_cp = 0,
+
+        lobby_main_mode_mp = 1,
+
+        lobby_main_mode_zm = 2,
+    };
+
+    enum join_result_e : uint32_t
+    {
+        join_result_success = 1,
+    };
+
+    enum lobby_module_e : int32_t
+    {
+        lobby_module_host = 0,
+
+        lobby_module_client = 1,
+
+        lobby_module_peer_to_peer = 3,
+    };
+
+    struct lobby_params_s
+    {
+        lobby_network_mode_e network_mode;
+
+        lobby_main_mode_e main_mode;
+    };
+
+    struct join_member_s
+    {
+        uint64_t xuid;
+
+        uint64_t lobby_id;
+
+        float skill_rating;
+
+        float skill_variance;
+
+        uint32_t probation_time_remaining[2];
+    };
+
+    struct msg_join_lobby_s
+    {
+        int32_t target_lobby;
+
+        int32_t source_lobby;
+
+        int32_t join_type;
+
+        uint8_t pad_0c[4];
+
+        uint64_t probed_xuid;
+
+        int32_t member_count;
+
+        uint8_t pad_1c[4];
+
+        join_member_s members[18];
+
+        int32_t split_screen_clients;
+
+        int32_t playlist_id;
+
+        int32_t playlist_ver;
+
+        int32_t ffotd_ver;
+
+        int16_t network_mode;
+
+        uint8_t pad_2[2];
+
+        uint32_t net_checksum;
+
+        int32_t protocol;
+
+        int32_t change_list;
+
+        int32_t ping_band;
+
+        uint32_t dlc_bits;
+
+        uint64_t join_nonce;
+
+        bool is_starter_pack;
+
+        char password[32];
+
+        uint8_t chunk[3];
+
+        uint8_t pad_3[5];
+    };
+
+    struct msg_join_response_s
+    {
+        join_result_e response;
+
+        char name[32];
+
+        uint32_t server_location;
+
+        int32_t lobby_type;
+
+        lobby_params_s lobby_params;
+
+        uint64_t reservation_key;
+    };
+
+#pragma pack(push, 1)
+    struct serialized_adr_mm_s
+    {
+        uint8_t valid;
+
+        uint8_t xnaddr[37];
+    };
+#pragma pack(pop)
+
+    struct msg_mutable_client_info_s
+    {
+        uint8_t data[1040];
+    };
+
+    struct msg_fixed_client_info_s
+    {
+        uint8_t data[208];
+    };
+
+    struct msg_join_member_info_s
+    {
+        msg_mutable_client_info_s mutable_client_info_msg;
+
+        msg_fixed_client_info_s fixed_client_info_msg;
+
+        uint64_t reservation_key;
+
+        int32_t target_lobby;
+
+        serialized_adr_mm_s serialized_adr;
+    };
+
+    static_assert(sizeof(msg_mutable_client_info_s) == 1040, "mutable client info must be 1040 bytes");
+
+    static_assert(sizeof(msg_fixed_client_info_s) == 208, "fixed client info must be 208 bytes");
+
+    static_assert(offsetof(msg_join_member_info_s, fixed_client_info_msg) == 1040, "fixed client info offset");
+
+    static_assert(offsetof(msg_join_member_info_s, reservation_key) == 1248, "reservation key offset");
+
+    static_assert(offsetof(msg_join_member_info_s, target_lobby) == 1256, "lobbytype offset");
+
+    static_assert(offsetof(msg_join_member_info_s, serialized_adr) == 1260, "serialized adr offset");
+
+    struct bd_matchmaking_info_s
+    {
+        uint8_t pad_00[0x20];
+
+        uint64_t bd_session_id;
+
+        uint8_t host_addr[255];
+
+        uint32_t host_addr_size;
+
+        uint32_t game_type;
+
+        uint32_t max_players;
+
+        uint32_t num_players;
+    };
+
+    struct matchmaking_info_s : bd_matchmaking_info_s
+    {
+        uint64_t session_id;
+
+        char key_exchange_key[17];
+
+        uint32_t server_type;
+
+        uint64_t xuid;
+
+        uint32_t server_location;
+
+        uint32_t latency_band;
+
+        int32_t show_in_matchmaking;
+
+        int32_t netcode_version;
+
+        int32_t map_packs;
+
+        int32_t playlist_version;
+
+        int32_t playlist_number;
+
+        int32_t is_empty;
+
+        int32_t team_max;
+
+        float skill;
+
+        int32_t geo1;
+
+        int32_t geo2;
+
+        int32_t geo3;
+
+        int32_t geo4;
+
+        int32_t dirty;
+
+        int32_t active;
+
+        int32_t time_since_last_update;
+
+        int32_t recreate_session;
+
+        int32_t time_since_update;
+
+        uint8_t pad2[0x14];
+    };
+
+    struct lobby_online_s
+    {
+        uint64_t state;
+
+        matchmaking_info_s mm;
+    };
+
+    using task_callback_t = char(__fastcall*)(void* record);
+
+    struct task_definition_s
+    {
+        uint64_t category;
+
+        const char* name;
+
+        int32_t payload_size;
+
+        task_callback_t completed_callback;
+
+        task_callback_t failure_callback;
+    };
+
+    inline constexpr uint32_t lobby_type_game = 1;
+
+    inline constexpr int lobby_session_advertised_offset = 0x50;
+
     struct inventory_item_s
     {
         int32_t item_id;
@@ -767,6 +1157,10 @@ namespace engine
 
     inline lobby_print_debug_t lobby_print_debug_fn = nullptr;
 
+    typedef char(__fastcall* lobby_print_array_t)(int64_t msg, int indent);
+
+    inline lobby_print_array_t lobby_print_array_fn = nullptr;
+
     typedef char(__fastcall* lobby_print_message_t)(int64_t msg, char force);
 
     inline lobby_print_message_t lobby_print_message_fn = nullptr;
@@ -818,6 +1212,14 @@ namespace engine
     typedef bool(__fastcall* net_send_packet_t)(uint32_t sock, uint32_t length, const void* data, const void* to);
 
     inline net_send_packet_t net_send_packet = nullptr;
+
+    typedef bool(__fastcall* oob_print_t)(uint32_t sock, const netadr_s* to, const char* data);
+
+    inline oob_print_t oob_print = nullptr;
+
+    typedef bool(__fastcall* oob_data_t)(uint32_t sock, const netadr_s* to, const void* data, int len);
+
+    inline oob_data_t oob_data = nullptr;
 
     typedef void*(__fastcall* steam_gs_pump_t)(void* server);
 
@@ -891,11 +1293,234 @@ namespace engine
 
     inline lobby_package_data_t lobby_package_data = nullptr;
 
+    typedef bool(__fastcall* lobby_package_float_t)(lobby_msg_s* lobby_msg, const char* key, float* value);
+
+    inline lobby_package_float_t lobby_package_float = nullptr;
+
+    typedef bool(__fastcall* lobby_prep_write_t)(lobby_msg_s* lobby_msg, void* buffer, int64_t size, uint32_t type);
+
+    inline lobby_prep_write_t lobby_prep_write_fn = nullptr;
+
+    typedef uint32_t(__fastcall* lobby_frame_send_t)(uint32_t local_client, void* lobby, int direction, void* lobby_msg, uint32_t type, uint32_t channel);
+
+    inline lobby_frame_send_t lobby_frame_send_fn = nullptr;
+
+    typedef uint32_t(__fastcall* lobby_channel_for_t)(int lobby_id, int sub_channel);
+
+    inline lobby_channel_for_t lobby_channel_for_fn = nullptr;
+
+    typedef void*(__fastcall* lobby_session_getter_t)(uint32_t type);
+
+    typedef void*(__fastcall* lobby_client_resolve_t)(void* handle, int lobby_id);
+
+    typedef bool(__fastcall* lobby_frame_send_addr_t)(uint32_t local_client, uint32_t channel, int direction, void* xnaddr, uint64_t dest_xuid, void* lobby_msg, uint32_t tag);
+
+    inline lobby_frame_send_addr_t lobby_frame_send_addr_fn = nullptr;
+
+    typedef void(__fastcall* msg_write_byte_t)(void* msg, int value);
+
+    inline msg_write_byte_t msg_write_byte_fn = nullptr;
+
+    static constexpr int lobby_direction_client_to_host = 0;
+
+    static constexpr int lobby_direction_host_to_client = 1;
+
+    static constexpr int lobby_direction_peer = 3;
+
+    static constexpr int lobby_member_max = 18;
+
+    static constexpr int lobby_sub_channel_state = 0;
+
+    static constexpr int lobby_sub_channel_heartbeat = 1;
+
+    static constexpr int lobby_sub_channel_reliable = 2;
+
+    static constexpr int lobby_sub_channel_unreliable = 3;
+
+    static constexpr int lobby_sub_channel_migrate = 4;
+
+    static constexpr int lobby_session_lobby_id = 4;
+
+    static constexpr int lobby_session_active_flag = 64;
+
+    static constexpr size_t lobby_msg_scratch_size = 0x20000;
+
+    static constexpr int32_t lobby_members_overflow = 30;
+
+    static constexpr int lobby_print_nest_bytes = 8192;
+
+    static constexpr int lobby_print_array_tag = 12;
+
+    static constexpr int lobby_resolve_xnaddr = 4;
+
+    static constexpr int lobby_resolve_valid = 12;
+
+    static constexpr int lobby_resolve_valid_skip = 1;
+
     void** steam_readp2p_slot();
 
     typedef char*(__fastcall* paragon_icon_name_t)(uint32_t mode, int icon_id);
 
     inline paragon_icon_name_t paragon_icon_name_fn = nullptr;
+
+    typedef float(__fastcall* notetrack_anim_lookup_t)(int64_t anim_table, int anim_index, int notetrack_hash);
+
+    inline notetrack_anim_lookup_t notetrack_anim_lookup_fn = nullptr;
+
+    typedef bool(__fastcall* lobby_handle_join_request_t)(int controller, netadr_s adr, int64_t xuid, lobby_msg_s* lobby_msg);
+
+    inline lobby_handle_join_request_t lobby_handle_join_request_fn = nullptr;
+
+    typedef int64_t(__fastcall* lobby_handle_member_info_t)(int controller, netadr_s adr, int64_t xuid, lobby_msg_s* lobby_msg);
+
+    inline lobby_handle_member_info_t lobby_handle_member_info_fn = nullptr;
+
+    typedef bool(__fastcall* lobby_msg_join_package_t)(msg_join_lobby_s* msg, lobby_msg_s* lobby_msg);
+
+    inline lobby_msg_join_package_t lobby_msg_join_package_fn = nullptr;
+
+    typedef bool(__fastcall* lobby_send_join_response_t)(int controller, int channel, lobby_module_e lobby_module, netadr_s adr, int64_t xuid, msg_join_response_s* response);
+
+    inline lobby_send_join_response_t lobby_send_join_response_fn = nullptr;
+
+    typedef int(__fastcall* lobby_netchan_global_channel_t)(int channel);
+
+    inline lobby_netchan_global_channel_t lobby_netchan_global_channel_fn = nullptr;
+
+    typedef void*(__fastcall* lobby_host_lobby_state_t)(int lobby_type);
+
+    inline lobby_host_lobby_state_t lobby_host_lobby_state_fn = nullptr;
+
+    typedef int(__fastcall* lobby_session_client_count_t)(void* state, int filter);
+
+    inline lobby_session_client_count_t lobby_session_client_count_fn = nullptr;
+
+    typedef void(__fastcall* lobby_add_joining_client_t)(int controller, netadr_s adr, int64_t xuid, msg_join_member_info_s* info, int64_t key);
+
+    inline lobby_add_joining_client_t lobby_add_joining_client_fn = nullptr;
+
+    typedef bool(__fastcall* lobby_package_glob_t)(lobby_msg_s* msg, const char* key, void* value, int length, uint64_t max_length);
+
+    inline lobby_package_glob_t lobby_package_glob_fn = nullptr;
+
+    typedef bool(__fastcall* msg_fixed_client_info_package_t)(msg_fixed_client_info_s* msg, lobby_msg_s* lobby_msg);
+
+    inline msg_fixed_client_info_package_t msg_fixed_client_info_package_fn = nullptr;
+
+    typedef bool(__fastcall* msg_mutable_client_info_package_t)(msg_mutable_client_info_s* msg, lobby_msg_s* lobby_msg);
+
+    inline msg_mutable_client_info_package_t msg_mutable_client_info_package_fn = nullptr;
+
+    typedef int64_t(__fastcall* lobby_set_matchmaking_info_t)(void* session);
+
+    inline lobby_set_matchmaking_info_t lobby_set_matchmaking_info_fn = nullptr;
+
+    typedef char(__fastcall* lobby_host_update_matchmaking_session_t)();
+
+    inline lobby_host_update_matchmaking_session_t lobby_host_update_matchmaking_session_fn = nullptr;
+
+    typedef void*(__fastcall* lobby_host_data_get_session_t)(uint32_t lobby_type);
+
+    inline lobby_host_data_get_session_t lobby_host_data_get_session_fn = nullptr;
+
+    typedef char(__fastcall* lobby_qos_listener_enable_t)(void* session);
+
+    inline lobby_qos_listener_enable_t lobby_qos_listener_enable_fn = nullptr;
+
+    typedef char(__fastcall* live_session_update_t)(void* task_def, void* matchmaking_info);
+
+    inline live_session_update_t live_session_update_fn = nullptr;
+
+    typedef int(__fastcall* live_storage_get_ffotd_version_t)();
+
+    inline live_storage_get_ffotd_version_t live_storage_get_ffotd_version_fn = nullptr;
+
+    typedef int(__fastcall* playlist_get_version_number_t)();
+
+    inline playlist_get_version_number_t playlist_get_version_number_fn = nullptr;
+
+    typedef char(__fastcall* lobby_session_set_max_clients_t)(void* state, int count);
+
+    inline lobby_session_set_max_clients_t lobby_session_set_max_clients_fn = nullptr;
+
+    typedef void(__fastcall* lobby_host_task_search_t)(int a1, int a2);
+
+    inline lobby_host_task_search_t lobby_host_task_search_fn = nullptr;
+
+    typedef char(__fastcall* live_can_host_server_t)(uint32_t controller, int a2, uint32_t* out);
+
+    inline live_can_host_server_t live_can_host_server_fn = nullptr;
+
+    typedef int64_t(__fastcall* bd_session_id_serialize_t)(void* this_ptr, void* byte_buffer);
+
+    inline bd_session_id_serialize_t bd_session_id_serialize_fn = nullptr;
+
+    typedef char(__fastcall* bd_byte_buffer_write_uint32_t)(void* byte_buffer, int value);
+
+    inline bd_byte_buffer_write_uint32_t bd_byte_buffer_write_uint32_fn = nullptr;
+
+    typedef void(__fastcall* cbuf_add_text_t)(int local_client, const char* text);
+
+    inline cbuf_add_text_t cbuf_add_text_fn = nullptr;
+
+    typedef char(__fastcall* lobby_online_create_session_t)(void* session);
+
+    inline lobby_online_create_session_t lobby_online_create_session_fn = nullptr;
+
+    typedef int64_t(__fastcall* allocate_structs_t)(void* buf, int64_t elem_size, int count, void* ctor1, void* ctor2);
+
+    inline allocate_structs_t allocate_structs_fn = nullptr;
+
+    typedef void(__fastcall* lobby_search_session_t)(void* session);
+
+    inline lobby_search_session_t lobby_search_session_fn = nullptr;
+
+    typedef bool(__fastcall* demonware_gate_t)(int local_client);
+
+    inline demonware_gate_t demonware_fetching_done_fn = nullptr;
+
+    inline demonware_gate_t demonware_signed_in_fn = nullptr;
+
+    typedef void*(__fastcall* lobby_session_get_t)(uint32_t lobby_type);
+
+    inline lobby_session_get_t lobby_session_get_fn = nullptr;
+
+    typedef void(__fastcall* bd_find_sessions_t)(uintptr_t matchmaking, void* remote_task, int query_id, uint32_t start_index, uint32_t max_num_results, void* query, int64_t results);
+
+    inline bd_find_sessions_t bd_find_sessions_fn = nullptr;
+
+    typedef bool(__fastcall* send_join_lobby_t)(int controller, int channel, lobby_module_e lobby_module, netadr_s adr, uint64_t xuid, msg_join_lobby_s* msg);
+
+    inline send_join_lobby_t send_join_lobby_fn = nullptr;
+
+    typedef uint32_t(__fastcall* content_packs_t)(int local_client);
+
+    inline content_packs_t content_packs_fn = nullptr;
+
+    typedef uint32_t(__fastcall* net_field_checksum_t)();
+
+    inline net_field_checksum_t net_field_checksum_fn = nullptr;
+
+    typedef void(__fastcall* dw_register_sec_t)(const void* sec_id, const void* sec_key);
+
+    inline dw_register_sec_t dw_register_sec_fn = nullptr;
+
+    typedef void(__fastcall* dw_common_to_netadr_t)(netadr_s* out, const void* common_addr, const void* sec_id);
+
+    inline dw_common_to_netadr_t dw_common_to_netadr_fn = nullptr;
+
+    typedef bool(__fastcall* msg_lobby_state_package_t)(void* state, lobby_msg_s* lobby_msg);
+
+    inline msg_lobby_state_package_t msg_lobby_state_package_fn = nullptr;
+
+    typedef bool(__fastcall* send_member_info_t)(int controller, int channel, lobby_module_e lobby_module, netadr_s adr, uint64_t xuid, msg_join_member_info_s* info);
+
+    inline send_member_info_t send_member_info_fn = nullptr;
+
+    typedef void(__fastcall* dw_netadr_to_common_t)(netadr_s netadr, void* out, int64_t size, void* extra);
+
+    inline dw_netadr_to_common_t dw_netadr_to_common_fn = nullptr;
+
 
     typedef char(__fastcall* steam_p2p_send_t)(void* ctx, uint64_t steam_id, void* data, uint32_t size);
 
@@ -1063,6 +1688,8 @@ namespace engine
         bool info_leak = true;
 
         bool workshop_mods = true;
+
+        bool notetrack = true;
     };
 
     inline protection_settings protection;
@@ -1082,6 +1709,12 @@ namespace engine
     inline int movement_tick_ms = 8;
 
     inline bool clientfield_fix = true;
+
+    inline bool matchmaking_fix = true;
+
+    inline bool lobby_advertise = false;
+
+    inline constexpr uint64_t min_asset_pointer = 0x100000;
 
     inline constexpr int lobby_session_stride = 10840;
 
@@ -1112,10 +1745,6 @@ namespace engine
     inline constexpr int conn_port = 164;
 
     inline constexpr int conn_nat = 168;
-
-    inline constexpr int lobby_client_flags = 460;
-
-    inline constexpr int lobby_client_ping_band = 1092;
 
     typedef void(__fastcall* clear_input_t)(int local_client);
 

@@ -31,6 +31,36 @@ namespace markup
         return u >= 0x20 && u < 0x7F;
     }
 
+    static constexpr int interp_max_key = 63;
+
+    static bool defuse_interp(char* p, bool& hit)
+    {
+        int key_len = 0;
+
+        bool closed = false;
+
+        while (key_len < 0x100 && p[2 + key_len] != 0)
+        {
+            if (p[2 + key_len] == 0x29)
+            {
+                closed = true;
+
+                break;
+            }
+
+            key_len++;
+        }
+
+        if (!closed || key_len == 0 || key_len > interp_max_key)
+        {
+            p[0] = 0x20;
+
+            hit = true;
+        }
+
+        return true;
+    }
+
     static bool defuse(char* p)
     {
         if (p == nullptr)
@@ -45,6 +75,15 @@ namespace markup
         while (*p != 0 && guard < 0x4000)
         {
             guard++;
+
+            if (*p == 0x24 && p[1] == 0x28)
+            {
+                defuse_interp(p, hit);
+
+                p++;
+
+                continue;
+            }
 
             if (*p != 0x5E)
             {

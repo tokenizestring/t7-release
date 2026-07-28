@@ -2,7 +2,9 @@
 
 #include "../../stdafx.hpp"
 
-namespace netchan
+namespace matchmaking
 {
     void initialize();
+
+    void create_session();
 }

@@ -4,6 +4,7 @@
 #include "../../utils/log/log.hpp"
 #include "../../utils/crypt/crypt.hpp"
 #include "../../features/overlay/overlay.hpp"
+#include "../../features/serverlist/serverlist.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -249,6 +250,87 @@ namespace lobbymsg
         return true;
     }
 
+    static void parse_probe_state(engine::lobby_msg_s* lobby_msg, uint64_t host_xuid)
+    {
+        static uint8_t state[0x8000];
+
+        if (engine::msg_lobby_state_package_fn == nullptr)
+        {
+            return;
+        }
+
+        memset(state, 0, sizeof(state));
+
+        if (!engine::msg_lobby_state_package_fn(state, lobby_msg))
+        {
+            return;
+        }
+
+        serverlist::player players[18] = {};
+
+        int found = 0;
+
+        for (int i = 0; i < 18; i++)
+        {
+            uint8_t* c = state + 104 + 1168 * i;
+
+            uint64_t client_xuid = *reinterpret_cast<uint64_t*>(c);
+
+            if (client_xuid == 0)
+            {
+                continue;
+            }
+
+            players[found].xuid = client_xuid;
+
+            players[found].client_num = *reinterpret_cast<uint8_t*>(c + 8);
+
+            strncpy_s(players[found].name, sizeof(players[found].name), reinterpret_cast<const char*>(c + 9), 32);
+
+            strncpy_s(players[found].clan, sizeof(players[found].clan), reinterpret_cast<const char*>(c + 72), 4);
+
+            found++;
+        }
+
+        uint64_t steam_lobby_id = *reinterpret_cast<uint64_t*>(state + 80);
+
+        serverlist::set_players(host_xuid, players, found, steam_lobby_id);
+    }
+
+    static uint64_t parse_join_response_key(engine::lobby_msg_s* lobby_msg)
+    {
+        int response = 0;
+
+        char name[36] = {};
+
+        uint32_t server_location = 0;
+
+        int lobby_type_field = 0;
+
+        int network_mode = 0;
+
+        int main_mode = 0;
+
+        uint64_t reservation_key = 0;
+
+        engine::lobby_package_int(lobby_msg, "response", &response);
+
+        engine::lobby_package_string(lobby_msg, "name", name, 32);
+
+        engine::lobby_package_uint(lobby_msg, "serverlocation", &server_location);
+
+        engine::lobby_package_int(lobby_msg, "lobbytype", &lobby_type_field);
+
+        engine::lobby_package_int(lobby_msg, "networkmode", &network_mode);
+
+        if (engine::lobby_package_int(lobby_msg, "mainmode", &main_mode))
+        {
+            engine::lobby_package_uint64(lobby_msg, "reservationkey", &reservation_key);
+        }
+
+        return reservation_key;
+    }
+
     static int64_t __fastcall hk_handle_packet_internal(uint32_t controller_index, void* adr, uint64_t xuid, int64_t lobby_type, int role, void* msg)
     {
         if (!engine::protection.lobby_messages)
@@ -321,10 +403,39 @@ namespace lobbymsg
             }
             break;
 
+            case engine::message_type_join_response:
+            {
+                if (serverlist::wants(xuid))
+                {
+                    uint64_t reservation_key = parse_join_response_key(&lobby_msg);
+
+                    serverlist::send_member_info(xuid, adr, reservation_key);
+
+                    return 0;
+                }
+            }
+            break;
+
+            case engine::message_type_lobby_state_game:
+            case engine::message_type_lobby_state_gamepublic:
+            case engine::message_type_lobby_state_gamecustom:
+            case engine::message_type_lobby_state_gametheater:
+            {
+                if (serverlist::wants(xuid))
+                {
+                    parse_probe_state(&lobby_msg, xuid);
+
+                    return 0;
+                }
+            }
+            break;
+
             case engine::message_type_join_agreement_request:
             case engine::message_type_join_complete:
             {
-                if (!lobby_join_active())
+                bool hosting = engine::lobby_host_data_get_session_fn != nullptr && engine::lobby_host_data_get_session_fn(engine::lobby_type_game) != nullptr;
+
+                if (!hosting && !lobby_join_active())
                 {
                     T7_LOG(std::string(cx("lobbymsg: pull not joining from ")) + std::to_string(xuid) + cx(", dropped."));
 
@@ -374,9 +485,39 @@ namespace lobbymsg
         return engine::lobby_print_message_fn(msg, force);
     }
 
+    static char __fastcall hk_lobby_print_array(int64_t msg, int indent)
+    {
+        if (engine::protection.lobby_messages && engine::lobby_print_depth >= engine::lobby_print_max_depth)
+        {
+            if (msg != 0)
+            {
+                *reinterpret_cast<uint32_t*>(msg) = 1;
+            }
+
+            if (engine::lobby_print_blocked++ % 64 == 0)
+            {
+                T7_LOG(cx("lobbymsg: deep-nested print array dropped."));
+
+                features::overlay::notify(cx("blocked crash attempt."), features::overlay::level::bad);
+            }
+
+            return 14;
+        }
+
+        engine::lobby_print_depth++;
+
+        char result = engine::lobby_print_array_fn(msg, indent);
+
+        engine::lobby_print_depth--;
+
+        return result;
+    }
+
     void initialize()
     {
         engine::lobby_prep_read_msg = reinterpret_cast<engine::lobby_prep_read_msg_t>(engine::base() + engine::lobby_prep_read);
+
+        engine::msg_lobby_state_package_fn = reinterpret_cast<engine::msg_lobby_state_package_t>(engine::base() + engine::msg_lobby_state_package);
 
         engine::lobby_type_name = reinterpret_cast<engine::lobby_type_name_t>(engine::base() + engine::lobby_type_name_fn);
 
@@ -415,6 +556,10 @@ namespace lobbymsg
         engine::lobby_print_debug_fn = reinterpret_cast<engine::lobby_print_debug_t>(engine::base() + engine::lobby_print_debug);
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::lobby_print_debug_fn), hk_lobby_print_debug);
+
+        engine::lobby_print_array_fn = reinterpret_cast<engine::lobby_print_array_t>(engine::base() + engine::lobby_print_array);
+
+        utils::hook::attach(reinterpret_cast<void**>(&engine::lobby_print_array_fn), hk_lobby_print_array);
 
         engine::lobby_print_message_fn = reinterpret_cast<engine::lobby_print_message_t>(engine::base() + engine::lobby_print_message);
 

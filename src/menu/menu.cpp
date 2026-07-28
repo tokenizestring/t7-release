@@ -1,9 +1,16 @@
 #include "menu.hpp"
 #include "../engine/engine.hpp"
 #include "../features/overlay/renderer.hpp"
+#include "../features/overlay/overlay.hpp"
 #include "../features/menulogo/menulogo.hpp"
+#include "../features/recents/recents.hpp"
+#include "../features/serverlist/serverlist.hpp"
 #include "../patches/video/video.hpp"
+#include "../patches/matchmaking/matchmaking.hpp"
+#include "../features/send/send.hpp"
 #include "../utils/hook/hook.hpp"
+#include "../utils/log/log.hpp"
+#include "../utils/crypt/crypt.hpp"
 
 #include <cstdio>
 #include <cstdint>
@@ -27,6 +34,11 @@ namespace menu
         engine::cl_disconnect();
     }
 
+    static void action_create_session()
+    {
+        matchmaking::create_session();
+    }
+
     static item general_items[] =
     {
         { "notifications", &engine::notifications_enabled, nullptr },
@@ -35,6 +47,10 @@ namespace menu
         { "faster texture streaming", &engine::texstream_enabled, nullptr },
         { "fps-safe movement", &engine::movement_tick_enabled, nullptr },
         { "no mismatch kick", &engine::clientfield_fix, nullptr },
+        { "matchmaking fix", &engine::matchmaking_fix, nullptr },
+        { "advertise lobby", &engine::lobby_advertise, nullptr },
+        { "create session", nullptr, action_create_session },
+        { "auto probe servers", &serverlist::auto_probe, nullptr },
         { "block steam p2p", &engine::block_p2p, nullptr },
         { "block raw udp", &engine::block_netchan, nullptr },
         { "disconnect", nullptr, action_disconnect },
@@ -52,9 +68,22 @@ namespace menu
         { "vote strings", &engine::protection.vote_strings, nullptr },
         { "player presence", &engine::protection.player_presence, nullptr },
         { "paragon icons", &engine::protection.paragon_icons, nullptr },
+        { "notetrack anim", &engine::protection.notetrack, nullptr },
         { "p2p userdata", &engine::protection.p2p_userdata, nullptr },
         { "info leak", &engine::protection.info_leak, nullptr },
         { "host-forced mods", &engine::protection.workshop_mods, nullptr },
+    };
+
+    static void action_toxic_host()
+    {
+        send::target_info ti = {};
+
+        send::send_join_overflow(ti);
+    }
+
+    static item toxic_items[] =
+    {
+        { "join overflow -> host", nullptr, action_toxic_host },
     };
 
     static const char* about_lines[] =
@@ -72,11 +101,17 @@ namespace menu
 
     static constexpr int page_clients = 2;
 
-    static constexpr int page_about = 3;
+    static constexpr int page_recents = 3;
 
-    static constexpr int page_exit = 4;
+    static constexpr int page_toxic = 4;
 
-    static constexpr int root_count = 5;
+    static constexpr int page_about = 5;
+
+    static constexpr int page_servers = 6;
+
+    static constexpr int page_exit = 7;
+
+    static constexpr int root_count = 8;
 
     static bool g_open = false;
 
@@ -85,6 +120,12 @@ namespace menu
     static int g_root_sel = 0;
 
     static int g_sub_sel = 0;
+
+    static int g_player_view = -1;
+
+    static int g_recents_page = 0;
+
+    static int g_servers_page = 0;
 
     struct lobby_player
     {
@@ -110,13 +151,17 @@ namespace menu
 
         bool connected;
 
-        int ping_band;
-
         bool has_ip;
 
         unsigned char ip[4];
 
+        uint16_t port;
+
         uint32_t nat;
+
+        bool has_netadr;
+
+        engine::netadr_s netadr;
     };
 
     static lobby_player g_players[18];
@@ -233,8 +278,6 @@ namespace menu
 
             p.talking = reinterpret_cast<engine::voip_status_t>(base + engine::voip_status)(client, 0) != 0;
 
-            p.ping_band = *reinterpret_cast<uint8_t*>(client + engine::lobby_client_ping_band);
-
             uint8_t* conn = *reinterpret_cast<uint8_t**>(client + engine::lobby_client_conn);
 
             if (reinterpret_cast<uintptr_t>(conn) >= 0x10000)
@@ -246,6 +289,8 @@ namespace menu
                 p.ip[2] = conn[engine::conn_ip + 2];
 
                 p.ip[3] = conn[engine::conn_ip + 3];
+
+                p.port = *reinterpret_cast<uint16_t*>(conn + engine::conn_port);
 
                 p.nat = *reinterpret_cast<uint32_t*>(conn + engine::conn_nat);
 
@@ -260,6 +305,22 @@ namespace menu
                 p.has_ip = false;
 
                 p.connected = false;
+            }
+
+            p.has_netadr = false;
+
+            for (int slot = 0; slot < 2; slot++)
+            {
+                uint8_t* entry = client + 32 * (slot + 39);
+
+                if (*entry)
+                {
+                    memcpy(&p.netadr, entry + 4, sizeof(engine::netadr_s));
+
+                    p.has_netadr = true;
+
+                    break;
+                }
             }
 
             found++;
@@ -284,6 +345,13 @@ namespace menu
             return protection_items;
         }
 
+        if (page == page_toxic)
+        {
+            count = sizeof(toxic_items) / sizeof(toxic_items[0]);
+
+            return toxic_items;
+        }
+
         count = 0;
 
         return nullptr;
@@ -301,9 +369,19 @@ namespace menu
             return "protection";
         }
 
+        if (i == page_toxic)
+        {
+            return "toxic";
+        }
+
         if (i == page_about)
         {
             return "about";
+        }
+
+        if (i == page_servers)
+        {
+            return "servers";
         }
 
         if (i == page_exit)
@@ -312,6 +390,11 @@ namespace menu
         }
 
         return "";
+    }
+
+    static void format_addr(const recents::address_record& a, char* buf, int buf_size)
+    {
+        snprintf(buf, buf_size, "%d.%d.%d.%d:%d", a.ip[0], a.ip[1], a.ip[2], a.ip[3], a.port);
     }
 
     static void activate()
@@ -327,6 +410,16 @@ namespace menu
                 g_view = g_root_sel;
 
                 g_sub_sel = 0;
+
+                if (g_view == page_recents)
+                {
+                    g_recents_page = 0;
+                }
+
+                if (g_view == page_servers)
+                {
+                    g_servers_page = 0;
+                }
             }
 
             return;
@@ -351,6 +444,89 @@ namespace menu
         }
     }
 
+    static bool local_is_host()
+    {
+        void* lobby = engine::active_lobby();
+
+        if (lobby == nullptr)
+        {
+            return false;
+        }
+
+        uint64_t host = engine::lobby_host_xuid(lobby);
+
+        if (host == 0)
+        {
+            return false;
+        }
+
+        return host == static_cast<uint64_t>(engine::user_xuid(0));
+    }
+
+    static void fire_player_action(int player_idx, int action_idx)
+    {
+        if (player_idx < 0 || player_idx >= 18)
+        {
+            features::overlay::notify(cx("invalid player index."), features::overlay::level::warn);
+
+            return;
+        }
+
+        lobby_player& p = g_players[player_idx];
+
+        if (!p.has_netadr)
+        {
+            features::overlay::notify(cx("no address for target."), features::overlay::level::warn);
+
+            T7_LOG(cx("send: no netadr for ") + std::string(p.name));
+
+            return;
+        }
+
+        send::target_info ti = {};
+
+        ti.ip[0] = p.ip[0];
+
+        ti.ip[1] = p.ip[1];
+
+        ti.ip[2] = p.ip[2];
+
+        ti.ip[3] = p.ip[3];
+
+        ti.port = p.port;
+
+        ti.xuid = p.xuid;
+
+        ti.netadr = p.netadr;
+
+        int c = 0;
+
+        while (c < 35 && p.name[c] != 0)
+        {
+            ti.name[c] = p.name[c];
+
+            c++;
+        }
+
+        ti.name[c] = 0;
+
+        if (action_idx == 0)
+        {
+            send::send_relay_test(ti);
+
+            if (local_is_host())
+            {
+                send::send_host_disconnect(ti);
+            }
+
+            send::send_migrate_test(ti);
+
+            send::send_print_nested(ti);
+
+            send::send_oob_at(ti);
+        }
+    }
+
     typedef uint32_t(__stdcall* xinput_get_state_t)(uint32_t index, void* state);
 
     static xinput_get_state_t g_xinput = nullptr;
@@ -362,6 +538,10 @@ namespace menu
         bool up;
 
         bool down;
+
+        bool left;
+
+        bool right;
 
         bool accept;
 
@@ -408,6 +588,10 @@ namespace menu
                 out.up = (state.buttons & 0x0001) != 0 || state.ly > 16000;
 
                 out.down = (state.buttons & 0x0002) != 0 || state.ly < -16000;
+
+                out.left = (state.buttons & 0x0004) != 0 || state.lx < -16000;
+
+                out.right = (state.buttons & 0x0008) != 0 || state.lx > 16000;
 
                 out.accept = (state.buttons & 0x1000) != 0;
 
@@ -468,6 +652,10 @@ namespace menu
 
         static bool latch_left = false;
 
+        static bool latch_right = false;
+
+        static bool latch_join = false;
+
         if (edge(VK_INSERT, latch_open))
         {
             g_open = !g_open;
@@ -481,6 +669,10 @@ namespace menu
         static bool pad_latch_up = false;
 
         static bool pad_latch_down = false;
+
+        static bool pad_latch_left = false;
+
+        static bool pad_latch_right = false;
 
         static bool pad_latch_accept = false;
 
@@ -498,10 +690,68 @@ namespace menu
 
         bool back = edge(VK_BACK, latch_back) || pad_edge(gp.cancel, pad_latch_cancel);
 
-        bool left = edge(VK_LEFT, latch_left);
+        bool left = edge(VK_LEFT, latch_left) || pad_edge(gp.left, pad_latch_left);
+
+        bool right = edge(VK_RIGHT, latch_right) || pad_edge(gp.right, pad_latch_right);
+
+        if (g_view == page_recents && right)
+        {
+            if (g_recents_page < recents::page_count() - 1)
+            {
+                g_recents_page++;
+
+                g_sub_sel = 0;
+            }
+        }
+
+        if (g_view == page_recents && left)
+        {
+            if (g_recents_page > 0)
+            {
+                g_recents_page--;
+
+                g_sub_sel = 0;
+
+                left = false;
+            }
+        }
+
+        if (g_view == page_servers && right)
+        {
+            if (g_servers_page < serverlist::page_count() - 1)
+            {
+                g_servers_page++;
+
+                g_sub_sel = 0;
+            }
+        }
+
+        if (g_view == page_servers && left)
+        {
+            if (g_servers_page > 0)
+            {
+                g_servers_page--;
+
+                g_sub_sel = 0;
+
+                left = false;
+            }
+        }
+
+        if (g_view == page_servers && edge('J', latch_join))
+        {
+            serverlist::join_steam_lobby(g_servers_page * serverlist::entries_per_page + g_sub_sel);
+        }
 
         if (g_view == -1)
         {
+            if (left)
+            {
+                g_open = false;
+
+                return;
+            }
+
             if (up)
             {
                 g_root_sel = (g_root_sel - 1 + root_count) % root_count;
@@ -522,9 +772,22 @@ namespace menu
 
         if (back || left)
         {
+            if (g_view == page_clients && g_player_view >= 0)
+            {
+                g_player_view = -1;
+
+                g_sub_sel = 0;
+
+                return;
+            }
+
             g_view = -1;
 
             g_sub_sel = 0;
+
+            g_player_view = -1;
+
+            g_recents_page = 0;
 
             return;
         }
@@ -535,7 +798,54 @@ namespace menu
 
         if (g_view == page_clients)
         {
-            count = gather_players();
+            count = g_player_view >= 0 ? 1 : gather_players();
+        }
+
+        if (g_view == page_recents)
+        {
+            int rc = 0;
+
+            int start = g_recents_page * recents::entries_per_page;
+
+            int total = recents::count();
+
+            rc = total - start;
+
+            if (rc > recents::entries_per_page)
+            {
+                rc = recents::entries_per_page;
+            }
+
+            if (rc < 0)
+            {
+                rc = 0;
+            }
+
+            count = rc;
+        }
+
+        if (g_view == page_servers)
+        {
+            if (g_servers_page >= serverlist::page_count())
+            {
+                g_servers_page = serverlist::page_count() - 1;
+            }
+
+            int start = g_servers_page * serverlist::entries_per_page;
+
+            int page_n = serverlist::count() - start;
+
+            if (page_n > serverlist::entries_per_page)
+            {
+                page_n = serverlist::entries_per_page;
+            }
+
+            if (page_n < 0)
+            {
+                page_n = 0;
+            }
+
+            count = page_n;
         }
 
         if (count <= 0)
@@ -560,7 +870,24 @@ namespace menu
 
         if (enter)
         {
-            activate();
+            if (g_view == page_clients && g_player_view == -1)
+            {
+                g_player_view = g_sub_sel;
+
+                g_sub_sel = 0;
+            }
+            else if (g_view == page_clients && g_player_view >= 0)
+            {
+                fire_player_action(g_player_view, g_sub_sel);
+            }
+            else if (g_view == page_servers)
+            {
+                serverlist::dispatch_probe(g_servers_page * serverlist::entries_per_page + g_sub_sel);
+            }
+            else
+            {
+                activate();
+            }
         }
     }
 
@@ -639,6 +966,8 @@ namespace menu
         utils::hook::attach(reinterpret_cast<void**>(&engine::key_event_fn), hk_key_event);
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::mouse_move_fn), hk_mouse_move);
+
+        send::initialize();
     }
 
     void tick(float screen_w, float screen_h)
@@ -655,6 +984,10 @@ namespace menu
         handle_input();
 
         block_game_input(g_open);
+
+        serverlist::set_active(g_open && g_view == page_servers);
+
+        serverlist::tick();
 
         if (!g_open)
         {
@@ -704,13 +1037,51 @@ namespace menu
 
         int body_rows = root_count;
 
+        int rc = recents::count();
+
         if (g_view == page_about)
         {
             body_rows = sizeof(about_lines) / sizeof(about_lines[0]);
         }
         else if (g_view == page_clients)
         {
-            body_rows = 1 + (n > 0 ? n : 1);
+            body_rows = g_player_view >= 0 ? 2 : 1 + (n > 0 ? n : 1);
+        }
+        else if (g_view == page_recents)
+        {
+            int page_start = g_recents_page * recents::entries_per_page;
+
+            int page_n = rc - page_start;
+
+            if (page_n > recents::entries_per_page)
+            {
+                page_n = recents::entries_per_page;
+            }
+
+            if (page_n < 0)
+            {
+                page_n = 0;
+            }
+
+            body_rows = 1 + (page_n > 0 ? page_n : 1);
+        }
+        else if (g_view == page_servers)
+        {
+            int start = g_servers_page * serverlist::entries_per_page;
+
+            int page_n = serverlist::count() - start;
+
+            if (page_n > serverlist::entries_per_page)
+            {
+                page_n = serverlist::entries_per_page;
+            }
+
+            if (page_n < 0)
+            {
+                page_n = 0;
+            }
+
+            body_rows = 1 + (page_n > 0 ? page_n : 1);
         }
         else if (g_view >= 0)
         {
@@ -769,7 +1140,54 @@ namespace menu
         }
         else if (g_view == page_clients)
         {
-            hover_rows = n > 12 ? 12 : n;
+            if (g_player_view >= 0)
+            {
+                hover_rows = 2;
+            }
+            else
+            {
+                hover_rows = n > 12 ? 12 : n;
+
+                hover_base = body_y + row_h;
+            }
+        }
+        else if (g_view == page_recents)
+        {
+            int page_start = g_recents_page * recents::entries_per_page;
+
+            int page_n = rc - page_start;
+
+            if (page_n > recents::entries_per_page)
+            {
+                page_n = recents::entries_per_page;
+            }
+
+            if (page_n < 0)
+            {
+                page_n = 0;
+            }
+
+            hover_rows = page_n;
+
+            hover_base = body_y + row_h;
+        }
+        else if (g_view == page_servers)
+        {
+            int start = g_servers_page * serverlist::entries_per_page;
+
+            int page_n = serverlist::count() - start;
+
+            if (page_n > serverlist::entries_per_page)
+            {
+                page_n = serverlist::entries_per_page;
+            }
+
+            if (page_n < 0)
+            {
+                page_n = 0;
+            }
+
+            hover_rows = page_n;
 
             hover_base = body_y + row_h;
         }
@@ -820,7 +1238,24 @@ namespace menu
                     g_sub_sel = hover;
                 }
 
-                if (g_view != page_clients)
+                if (g_view == page_clients && g_player_view == -1)
+                {
+                    g_player_view = hover;
+
+                    g_sub_sel = 0;
+                }
+                else if (g_view == page_clients && g_player_view >= 0)
+                {
+                    fire_player_action(g_player_view, g_sub_sel);
+                }
+                else if (g_view == page_recents)
+                {
+                }
+                else if (g_view == page_servers)
+                {
+                    serverlist::dispatch_probe(g_servers_page * serverlist::entries_per_page + g_sub_sel);
+                }
+                else if (g_view != page_clients)
                 {
                     activate();
                 }
@@ -858,9 +1293,22 @@ namespace menu
 
             if (back_hover && click)
             {
-                g_view = -1;
+                if (g_view == page_clients && g_player_view >= 0)
+                {
+                    g_player_view = -1;
 
-                g_sub_sel = 0;
+                    g_sub_sel = 0;
+                }
+                else
+                {
+                    g_view = -1;
+
+                    g_sub_sel = 0;
+
+                    g_player_view = -1;
+
+                    g_recents_page = 0;
+                }
             }
         }
 
@@ -887,6 +1335,26 @@ namespace menu
 
                     renderer::draw_text(lx + renderer::text_width(num) + 5.0f, row_y + text_dy, "clients", sel ? text : dim);
                 }
+                else if (i == page_recents)
+                {
+                    char num[8];
+
+                    sprintf_s(num, sizeof(num), "%d", rc);
+
+                    renderer::draw_text(lx, row_y + text_dy, num, green);
+
+                    renderer::draw_text(lx + renderer::text_width(num) + 5.0f, row_y + text_dy, "recents", sel ? text : dim);
+                }
+                else if (i == page_servers)
+                {
+                    char num[8];
+
+                    sprintf_s(num, sizeof(num), "%d", serverlist::count());
+
+                    renderer::draw_text(lx, row_y + text_dy, num, green);
+
+                    renderer::draw_text(lx + renderer::text_width(num) + 5.0f, row_y + text_dy, "servers", sel ? text : dim);
+                }
                 else
                 {
                     renderer::draw_text(lx, row_y + text_dy, root_label(i), sel ? text : dim);
@@ -909,86 +1377,144 @@ namespace menu
         }
         else if (g_view == page_clients)
         {
-            char num[8];
-
-            sprintf_s(num, sizeof(num), "%d", n);
-
-            renderer::draw_text(lx, body_y + text_dy, num, green);
-
-            renderer::draw_text(lx + renderer::text_width(num) + 5.0f, body_y + text_dy, "clients connected", dim);
-
-            if (n == 0)
+            if (g_player_view >= 0)
             {
-                renderer::draw_text(lx, body_y + row_h + text_dy, "no one connected", dim);
-            }
+                const char* actions[] = { "crash" };
 
-            int shown = n > 12 ? 12 : n;
-
-            for (int i = 0; i < shown; i++)
-            {
-                float row_y = body_y + (i + 1) * row_h;
-
-                bool sel = g_sub_sel == i;
-
-                if (sel)
+                for (int i = 0; i < 1; i++)
                 {
-                    renderer::draw_rect(x + 2.0f, row_y, panel_w - 4.0f, row_h, highlight);
-                }
+                    float row_y = body_y + i * row_h;
 
-                lobby_player& lp = g_players[i];
+                    bool sel = g_sub_sel == i;
 
-                if (lp.talking)
-                {
-                    renderer::draw_rect(lx + 2.0f, row_y + row_h * 0.5f - 3.0f, 6.0f, 6.0f, green);
-                }
-
-                renderer::draw_text(lx + 16.0f, row_y + text_dy, lp.name, sel ? text : dim);
-
-                const char* tag = nullptr;
-
-                if (lp.local && lp.host)
-                {
-                    tag = "you, host";
-                }
-                else if (lp.local)
-                {
-                    tag = "you";
-                }
-                else if (lp.host)
-                {
-                    tag = "host";
-                }
-
-                if (tag != nullptr)
-                {
-                    renderer::draw_text(x + panel_w - pad - renderer::text_width(tag), row_y + text_dy, tag, bar);
-                }
-                else
-                {
-                    int lbars = lp.ping_band < 0 ? 0 : (lp.ping_band > 4 ? 4 : lp.ping_band);
-
-                    float px = x + panel_w - pad - 4.0f * 5.0f;
-
-                    for (int b = 0; b < 4; b++)
+                    if (sel)
                     {
-                        uint32_t bc = b < lbars ? green : renderer::rgba(60, 58, 74, 255);
+                        renderer::draw_rect(x + 2.0f, row_y, panel_w - 4.0f, row_h, highlight);
+                    }
 
-                        float pbh = 2.0f + b * 2.5f;
+                    renderer::draw_text(lx, row_y + text_dy, actions[i], sel ? text : dim);
 
-                        renderer::draw_rect(px + b * 5.0f, row_y + row_h * 0.5f + 4.0f - pbh, 3.0f, pbh, bc);
+                    renderer::draw_text(x + panel_w - pad - renderer::text_width(">"), row_y + text_dy, ">", bar);
+                }
+            }
+            else
+            {
+                char num[8];
+
+                sprintf_s(num, sizeof(num), "%d", n);
+
+                renderer::draw_text(lx, body_y + text_dy, num, green);
+
+                renderer::draw_text(lx + renderer::text_width(num) + 5.0f, body_y + text_dy, "clients connected", dim);
+
+                if (n == 0)
+                {
+                    renderer::draw_text(lx, body_y + row_h + text_dy, "no one connected", dim);
+                }
+
+                int shown = n > 12 ? 12 : n;
+
+                for (int i = 0; i < shown; i++)
+                {
+                    float row_y = body_y + (i + 1) * row_h;
+
+                    bool sel = g_sub_sel == i;
+
+                    if (sel)
+                    {
+                        renderer::draw_rect(x + 2.0f, row_y, panel_w - 4.0f, row_h, highlight);
+                    }
+
+                    lobby_player& lp = g_players[i];
+
+                    if (lp.talking)
+                    {
+                        renderer::draw_rect(lx + 2.0f, row_y + row_h * 0.5f - 3.0f, 6.0f, 6.0f, green);
+                    }
+
+                    renderer::draw_text(lx + 16.0f, row_y + text_dy, lp.name, sel ? text : dim);
+
+                    const char* tag = nullptr;
+
+                    if (lp.local && lp.host)
+                    {
+                        tag = "you, host";
+                    }
+                    else if (lp.local)
+                    {
+                        tag = "you";
+                    }
+                    else if (lp.host)
+                    {
+                        tag = "host";
+                    }
+
+                    if (tag != nullptr)
+                    {
+                        renderer::draw_text(x + panel_w - pad - renderer::text_width(tag), row_y + text_dy, tag, bar);
                     }
                 }
             }
 
-            if (n > 0)
-            {
-                lobby_player& p = g_players[g_sub_sel];
+            int detail_idx = g_player_view >= 0 ? g_player_view : g_sub_sel;
 
-                float bw = 270.0f;
+            if (n > 0 && detail_idx < n)
+            {
+                lobby_player& p = g_players[detail_idx];
+
+                const char* c_badge = p.host ? "host" : (p.leader ? "leader" : "");
+
+                char c_level[16];
+
+                sprintf_s(c_level, sizeof(c_level), "%d", p.rank + 1);
+
+                char c_prest[16];
+
+                sprintf_s(c_prest, sizeof(c_prest), "%d", p.prestige);
+
+                char c_para[16];
+
+                sprintf_s(c_para, sizeof(c_para), p.paragon > 0 ? "%d" : "-", p.paragon);
+
+                const char* c_clan = p.clan[0] != 0 ? p.clan : "-";
+
+                const char* c_status = p.connected ? "connected" : "connecting";
+
+                const char* c_nat = p.nat == 1 ? "open" : (p.nat == 2 ? "moderate" : (p.nat == 3 ? "strict" : "unknown"));
+
+                char c_ip[32];
+
+                sprintf_s(c_ip, sizeof(c_ip), p.has_ip ? "%d.%d.%d.%d" : "-", p.ip[0], p.ip[1], p.ip[2], p.ip[3]);
+
+                char c_xuid[24];
+
+                sprintf_s(c_xuid, sizeof(c_xuid), "%llu", static_cast<unsigned long long>(p.xuid));
+
+                float c_gap = 30.0f;
+
+                float c_content = renderer::text_width(p.name) + (c_badge[0] != 0 ? c_gap + renderer::text_width(c_badge) : 0.0f);
+
+                c_content = fmaxf(c_content, renderer::text_width("level") + c_gap + renderer::text_width(c_level));
+
+                c_content = fmaxf(c_content, renderer::text_width("prestige") + c_gap + renderer::text_width(c_prest));
+
+                c_content = fmaxf(c_content, renderer::text_width("paragon") + c_gap + renderer::text_width(c_para));
+
+                c_content = fmaxf(c_content, renderer::text_width("clan") + c_gap + renderer::text_width(c_clan));
+
+                c_content = fmaxf(c_content, renderer::text_width("status") + c_gap + renderer::text_width(c_status));
+
+                c_content = fmaxf(c_content, renderer::text_width("nat type") + c_gap + renderer::text_width(c_nat));
+
+                c_content = fmaxf(c_content, renderer::text_width("address") + c_gap + renderer::text_width(c_ip));
+
+                c_content = fmaxf(c_content, renderer::text_width(c_xuid));
+
+                float bw = c_content + pad * 2.0f;
 
                 float bx = x + panel_w + 12.0f;
 
-                float bh = header_h + 11.0f * row_h + pad;
+                float bh = header_h + 10.0f * row_h + pad;
 
                 renderer::draw_rect(bx, y, bw, bh, back);
 
@@ -1079,23 +1605,6 @@ namespace menu
 
                 dy += row_h;
 
-                renderer::draw_text(bx + pad, dy, "ping", dim);
-
-                int bars = p.ping_band < 0 ? 0 : (p.ping_band > 4 ? 4 : p.ping_band);
-
-                float bar_x = bx + bw - pad - 4.0f * 7.0f;
-
-                for (int b = 0; b < 4; b++)
-                {
-                    uint32_t bc = b < bars ? green : renderer::rgba(60, 58, 74, 255);
-
-                    float bh2 = 3.0f + b * 3.0f;
-
-                    renderer::draw_rect(bar_x + b * 7.0f, dy + line - bh2, 5.0f, bh2, bc);
-                }
-
-                dy += row_h;
-
                 renderer::draw_text(bx + pad, dy, "address", dim);
 
                 if (p.has_ip)
@@ -1133,6 +1642,431 @@ namespace menu
                 sprintf_s(xuid_text, sizeof(xuid_text), "%llu", static_cast<unsigned long long>(p.xuid));
 
                 renderer::draw_text(bx + pad, dy + row_h, xuid_text, green);
+            }
+        }
+        else if (g_view == page_recents)
+        {
+            int total_pages = recents::page_count();
+
+            int page_start = g_recents_page * recents::entries_per_page;
+
+            int page_n = rc - page_start;
+
+            if (page_n > recents::entries_per_page)
+            {
+                page_n = recents::entries_per_page;
+            }
+
+            if (page_n < 0)
+            {
+                page_n = 0;
+            }
+
+            char header[48];
+
+            sprintf_s(header, sizeof(header), "page %d/%d", g_recents_page + 1, total_pages);
+
+            char rcount[8];
+
+            sprintf_s(rcount, sizeof(rcount), "%d", rc);
+
+            renderer::draw_text(lx, body_y + text_dy, rcount, green);
+
+            renderer::draw_text(lx + renderer::text_width(rcount) + 5.0f, body_y + text_dy, "recents", dim);
+
+            renderer::draw_text(x + panel_w - pad - renderer::text_width(header), body_y + text_dy, header, dim);
+
+            if (page_n == 0)
+            {
+                renderer::draw_text(lx, body_y + row_h + text_dy, "no players found", dim);
+            }
+
+            for (int i = 0; i < page_n; i++)
+            {
+                float row_y = body_y + (i + 1) * row_h;
+
+                bool sel = g_sub_sel == i;
+
+                if (sel)
+                {
+                    renderer::draw_rect(x + 2.0f, row_y, panel_w - 4.0f, row_h, highlight);
+                }
+
+                const recents::entry* re = recents::get(page_start + i);
+
+                if (re == nullptr)
+                {
+                    continue;
+                }
+
+                renderer::draw_text(lx, row_y + text_dy, re->name, sel ? text : dim);
+
+                char ago[24];
+
+                recents::format_ago(re->last_seen, ago, sizeof(ago));
+
+                renderer::draw_text(x + panel_w - pad - renderer::text_width(ago), row_y + text_dy, ago, dim);
+            }
+
+            if (page_n > 0 && g_sub_sel < page_n)
+            {
+                const recents::entry* re = recents::get(page_start + g_sub_sel);
+
+                if (re != nullptr)
+                {
+                    char r_addr[32];
+
+                    sprintf_s(r_addr, sizeof(r_addr), re->has_addr ? "%d.%d.%d.%d" : "-", re->current.ip[0], re->current.ip[1], re->current.ip[2], re->current.ip[3]);
+
+                    char r_ago[24];
+
+                    recents::format_ago(re->last_seen, r_ago, sizeof(r_ago));
+
+                    char r_xuid[24];
+
+                    sprintf_s(r_xuid, sizeof(r_xuid), "%llu", static_cast<unsigned long long>(re->xuid));
+
+                    float r_gap = 30.0f;
+
+                    float r_content = renderer::text_width(re->name);
+
+                    r_content = fmaxf(r_content, renderer::text_width("address") + r_gap + renderer::text_width(r_addr));
+
+                    r_content = fmaxf(r_content, renderer::text_width("last seen") + r_gap + renderer::text_width(r_ago));
+
+                    r_content = fmaxf(r_content, renderer::text_width(r_xuid));
+
+                    r_content = fmaxf(r_content, renderer::text_width("previous addresses"));
+
+                    for (int a = 0; a < re->addr_count; a++)
+                    {
+                        char r_hist[32];
+
+                        format_addr(re->history[a], r_hist, sizeof(r_hist));
+
+                        r_content = fmaxf(r_content, 8.0f + renderer::text_width(r_hist));
+                    }
+
+                    float bw = r_content + pad * 2.0f;
+
+                    float bx = x + panel_w + 12.0f;
+
+                    int detail_rows = 4 + (re->has_addr ? 1 : 0) + re->addr_count;
+
+                    float bh = header_h + detail_rows * row_h + pad;
+
+                    renderer::draw_rect(bx, y, bw, bh, back);
+
+                    renderer::draw_rect(bx, y, 4.0f, bh, bar);
+
+                    renderer::draw_text_shadow(bx + pad, y + pad * 0.9f, re->name, text, shadow);
+
+                    renderer::draw_rect(bx + pad, y + header_h - 1.0f, bw - pad * 2.0f, 1.0f, sep);
+
+                    float dy = y + header_h + 6.0f;
+
+                    renderer::draw_text(bx + pad, dy, "address", dim);
+
+                    if (re->has_addr)
+                    {
+                        char addr_buf[32];
+
+                        sprintf_s(addr_buf, sizeof(addr_buf), "%d.%d.%d.%d", re->current.ip[0], re->current.ip[1], re->current.ip[2], re->current.ip[3]);
+
+                        float ip_w = renderer::text_width(addr_buf);
+
+                        float ip_x = bx + bw - pad - ip_w;
+
+                        bool ip_hover = mx >= ip_x - 3.0f && mx <= ip_x + ip_w + 3.0f && my >= dy - 3.0f && my <= dy + line + 3.0f;
+
+                        if (ip_hover)
+                        {
+                            renderer::draw_text(ip_x, dy, addr_buf, green);
+                        }
+                        else
+                        {
+                            renderer::draw_rect(ip_x, dy + 1.0f, ip_w, line - 2.0f, renderer::rgba(46, 44, 60, 255));
+                        }
+                    }
+                    else
+                    {
+                        renderer::draw_text(bx + bw - pad - renderer::text_width("-"), dy, "-", dim);
+                    }
+
+                    dy += row_h;
+
+                    renderer::draw_text(bx + pad, dy, "last seen", dim);
+
+                    char ago[24];
+
+                    recents::format_ago(re->last_seen, ago, sizeof(ago));
+
+                    renderer::draw_text(bx + bw - pad - renderer::text_width(ago), dy, ago, green);
+
+                    dy += row_h * 1.3f;
+
+                    renderer::draw_text(bx + pad, dy, "xuid", dim);
+
+                    char xuid_buf[24];
+
+                    sprintf_s(xuid_buf, sizeof(xuid_buf), "%llu", static_cast<unsigned long long>(re->xuid));
+
+                    renderer::draw_text(bx + pad, dy + row_h, xuid_buf, green);
+
+                    dy += row_h * 2.0f;
+
+                    if (re->addr_count > 0)
+                    {
+                        renderer::draw_text(bx + pad, dy, "previous addresses", dim);
+
+                        dy += row_h;
+
+                        for (int a = 0; a < re->addr_count; a++)
+                        {
+                            char abuf[32];
+
+                            format_addr(re->history[a], abuf, sizeof(abuf));
+
+                            renderer::draw_text(bx + pad + 8.0f, dy, abuf, dim);
+
+                            dy += row_h;
+                        }
+                    }
+                }
+            }
+        }
+        else if (g_view == page_servers)
+        {
+            int sc = serverlist::count();
+
+            int total_pages = serverlist::page_count();
+
+            int page_start = g_servers_page * serverlist::entries_per_page;
+
+            int page_n = sc - page_start;
+
+            if (page_n > serverlist::entries_per_page)
+            {
+                page_n = serverlist::entries_per_page;
+            }
+
+            if (page_n < 0)
+            {
+                page_n = 0;
+            }
+
+            char scount[8];
+
+            sprintf_s(scount, sizeof(scount), "%d", sc);
+
+            renderer::draw_text(lx, body_y + text_dy, scount, green);
+
+            renderer::draw_text(lx + renderer::text_width(scount) + 5.0f, body_y + text_dy, "servers", dim);
+
+            char pgtxt[24];
+
+            sprintf_s(pgtxt, sizeof(pgtxt), "page %d/%d", g_servers_page + 1, total_pages);
+
+            renderer::draw_text(x + panel_w - pad - renderer::text_width(pgtxt), body_y + text_dy, pgtxt, dim);
+
+            if (page_n == 0)
+            {
+                renderer::draw_text(lx, body_y + row_h + text_dy, "searching...", dim);
+            }
+
+            for (int i = 0; i < page_n; i++)
+            {
+                float row_y = body_y + (i + 1) * row_h;
+
+                bool sel = g_sub_sel == i;
+
+                if (sel)
+                {
+                    renderer::draw_rect(x + 2.0f, row_y, panel_w - 4.0f, row_h, highlight);
+                }
+
+                const serverlist::entry* se = serverlist::get(page_start + i);
+
+                if (se == nullptr)
+                {
+                    continue;
+                }
+
+                if (se->last_state_ms != 0 && GetTickCount64() - se->last_state_ms < 5000)
+                {
+                    renderer::draw_rect(x + 8.0f, row_y + row_h * 0.5f - 3.0f, 6.0f, 6.0f, green);
+                }
+
+                char addr[32];
+
+                sprintf_s(addr, sizeof(addr), "%s:%u", se->ip, se->port);
+
+                renderer::draw_text(lx, row_y + text_dy, addr, sel ? text : dim);
+
+                char info[16];
+
+                sprintf_s(info, sizeof(info), "%u/%u", se->num_players, se->max_players);
+
+                renderer::draw_text(x + panel_w - pad - renderer::text_width(info), row_y + text_dy, info, se->dedicated ? green : bar);
+            }
+
+            if (page_n > 0 && g_sub_sel < page_n)
+            {
+                serverlist::lock();
+
+                const serverlist::entry* se = serverlist::get(page_start + g_sub_sel);
+
+                if (se != nullptr)
+                {
+                    const char* head_text = se->dedicated ? "dedicated" : "peer to peer";
+
+                    const char* type_text = se->dedicated ? "dedicated" : "p2p";
+
+                    char addr_buf[32];
+
+                    sprintf_s(addr_buf, sizeof(addr_buf), "%s:%u", se->ip, se->port);
+
+                    char pl_buf[16];
+
+                    sprintf_s(pl_buf, sizeof(pl_buf), "%u/%u", se->num_players, se->max_players);
+
+                    char xuid_buf[24];
+
+                    sprintf_s(xuid_buf, sizeof(xuid_buf), "%llu", static_cast<unsigned long long>(se->xuid));
+
+                    float gap = 30.0f;
+
+                    float content_w = renderer::text_width(head_text);
+
+                    content_w = fmaxf(content_w, renderer::text_width("address") + gap + renderer::text_width(addr_buf));
+
+                    content_w = fmaxf(content_w, renderer::text_width("players") + gap + renderer::text_width(pl_buf));
+
+                    content_w = fmaxf(content_w, renderer::text_width("type") + gap + renderer::text_width(type_text));
+
+                    content_w = fmaxf(content_w, renderer::text_width("host xuid"));
+
+                    content_w = fmaxf(content_w, renderer::text_width(xuid_buf));
+
+                    content_w = fmaxf(content_w, renderer::text_width("[enter] probe   [j] steam lobby"));
+
+                    float bw = content_w + pad * 2.0f;
+
+                    float bx = x + panel_w + 12.0f;
+
+                    float bh = header_h + 7.0f * row_h + pad;
+
+                    renderer::draw_rect(bx, y, bw, bh, back);
+
+                    renderer::draw_rect(bx, y, 4.0f, bh, bar);
+
+                    renderer::draw_text_shadow(bx + pad, y + pad * 0.9f, head_text, text, shadow);
+
+                    renderer::draw_rect(bx + pad, y + header_h - 1.0f, bw - pad * 2.0f, 1.0f, sep);
+
+                    float dy = y + header_h + 6.0f;
+
+                    renderer::draw_text(bx + pad, dy, "address", dim);
+
+                    renderer::draw_text(bx + bw - pad - renderer::text_width(addr_buf), dy, addr_buf, green);
+
+                    dy += row_h;
+
+                    renderer::draw_text(bx + pad, dy, "players", dim);
+
+                    renderer::draw_text(bx + bw - pad - renderer::text_width(pl_buf), dy, pl_buf, text);
+
+                    dy += row_h;
+
+                    renderer::draw_text(bx + pad, dy, "type", dim);
+
+                    renderer::draw_text(bx + bw - pad - renderer::text_width(type_text), dy, type_text, se->dedicated ? green : bar);
+
+                    dy += row_h * 1.3f;
+
+                    renderer::draw_text(bx + pad, dy, "host xuid", dim);
+
+                    renderer::draw_text(bx + pad, dy + row_h, xuid_buf, green);
+
+                    dy += row_h * 2.2f;
+
+                    renderer::draw_text(bx + pad, dy, "[enter] probe   [j] steam lobby", dim);
+
+                    int prows = se->probed ? se->player_count : 0;
+
+                    char plabel[24];
+
+                    sprintf_s(plabel, sizeof(plabel), "players (%d)", se->player_count);
+
+                    float pcontent = renderer::text_width(plabel);
+
+                    char rows[18][80];
+
+                    char nums[18][8];
+
+                    for (int pi = 0; pi < prows; pi++)
+                    {
+                        const serverlist::player& lp = se->players[pi];
+
+                        if (lp.clan[0] != 0)
+                        {
+                            sprintf_s(rows[pi], sizeof(rows[pi]), "[%s] %s", lp.clan, lp.name);
+                        }
+                        else
+                        {
+                            sprintf_s(rows[pi], sizeof(rows[pi]), "%s", lp.name);
+                        }
+
+                        sprintf_s(nums[pi], sizeof(nums[pi]), "#%d", lp.client_num);
+
+                        pcontent = fmaxf(pcontent, renderer::text_width(rows[pi]) + gap + renderer::text_width(nums[pi]));
+                    }
+
+                    if (!se->probed)
+                    {
+                        pcontent = fmaxf(pcontent, renderer::text_width("press enter to probe"));
+                    }
+
+                    float pbw = pcontent + pad * 2.0f;
+
+                    float pbx = bx + bw + 12.0f;
+
+                    int extra = se->probed ? (prows > 0 ? prows : 1) : 1;
+
+                    float pbh = header_h + (extra + 0.5f) * row_h + pad;
+
+                    renderer::draw_rect(pbx, y, pbw, pbh, back);
+
+                    renderer::draw_rect(pbx, y, 4.0f, pbh, bar);
+
+                    renderer::draw_text_shadow(pbx + pad, y + pad * 0.9f, plabel, text, shadow);
+
+                    renderer::draw_rect(pbx + pad, y + header_h - 1.0f, pbw - pad * 2.0f, 1.0f, sep);
+
+                    float pdy = y + header_h + 6.0f;
+
+                    if (!se->probed)
+                    {
+                        renderer::draw_text(pbx + pad, pdy, "press enter to probe", dim);
+                    }
+                    else if (prows == 0)
+                    {
+                        renderer::draw_text(pbx + pad, pdy, "no players", dim);
+                    }
+                    else
+                    {
+                        for (int pi = 0; pi < prows; pi++)
+                        {
+                            renderer::draw_text(pbx + pad, pdy, rows[pi], text);
+
+                            renderer::draw_text(pbx + pbw - pad - renderer::text_width(nums[pi]), pdy, nums[pi], green);
+
+                            pdy += row_h;
+                        }
+                    }
+                }
+
+                serverlist::unlock();
             }
         }
         else

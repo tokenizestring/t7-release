@@ -9,8 +9,6 @@
 
 namespace workshop
 {
-    static bool toggle_latch = false;
-
     static int64_t __fastcall hk_apply_game_state(uint32_t a1, int64_t a2, int64_t a3, int64_t message)
     {
         if (engine::protection.workshop_mods && message != 0)
@@ -42,25 +40,6 @@ namespace workshop
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::apply_game_state_fn), hk_apply_game_state);
 
-        T7_LOG(cx("workshop: host-forced ugc protection installed (F6 toggles)."));
-    }
-
-    void tick()
-    {
-        bool down = (GetAsyncKeyState(VK_F6) & 0x8000) != 0;
-
-        if (down && !toggle_latch)
-        {
-            toggle_latch = true;
-
-            engine::protection.workshop_mods = !engine::protection.workshop_mods;
-
-            if (engine::protection.workshop_mods) T7_LOG(cx("workshop: enabled - host-forced ugc blocked."));
-            else T7_LOG(cx("workshop: disabled - host-forced ugc allowed."));
-        }
-        else if (!down)
-        {
-            toggle_latch = false;
-        }
+        T7_LOG(cx("workshop: host-forced ugc protection installed."));
     }
 }

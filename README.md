@@ -53,6 +53,7 @@ The other direction. When you host, connected clients can send you commands, and
 - `callvote`: clamps and sanitizes oversized vote strings.
 - `presence`: clamps the LivePresence player count so the serializer can't overflow.
 - `paragon`: guards the malformed paragon-icon scoreboard lookup.
+- `notetrack`: guards the dangling xanim notetrack lookup so a stale entry pointer returns a safe sentinel instead of being dereferenced.
 
 ### Privacy
 
@@ -74,6 +75,27 @@ The other direction. When you host, connected clients can send you commands, and
 ### Unlocks
 
 - `inventory`: reports owned quantities and purchased slots for cosmetic items.
+
+## Server browser
+
+A live browser for dedicated Black Ops III servers, built into the Insert menu. It searches demonware for dedicated sessions and lists them paginated, filtering out empty and full lobbies. Each row shows the address, live player count and session type, and the cards auto-scale to their contents.
+
+Selecting a server dispatches a **probe**: a two-step join handshake (join request, then a member-info reply carrying our serialized address) that pulls the host's full player roster back without ever connecting. The roster shows up in its own card beside the server, with each player's name, clan tag and client number.
+
+- **Auto probe** (menu toggle): probes every listed dedi once a second, skipping full lobbies, and keeps running with the menu closed. A green dot on a row means our probe is still live in that server.
+- **Steam lobby join**: for any probed dedi it also joins the underlying Steam lobby, so you can read the in-lobby chat. With auto probe on this happens automatically for every server, and you can sit in any number of them at once. Steam chat can be sent back out as well.
+
+### Hosting (`matchmaking`)
+
+Create and advertise your own session so it shows up in the browser and clients can find and join you. The host-side join handlers (join request and member info) are replaced with hardened versions at the same time.
+
+### Recently seen (`recents`)
+
+Keeps a rolling record of players seen across sessions: xuid, name, when they were last seen, and a short history of the IP and port they connected from.
+
+### Network test harness (`send`)
+
+An internal harness for firing a specific packet at a target address (relay probe, out-of-band command, oversized join, host disconnect, host migrate, nested print) to exercise the guards above against a real endpoint.
 
 ## Hotkeys
 
@@ -120,7 +142,7 @@ src/
   dllmain.cpp        entry point plus the init and tick loop
   engine/            game offsets and typed wrappers
   patches/           one folder per feature module
-  features/          non-patch features (overlay, logo)
+  features/          non-patch features (overlay, logo, server browser, recents, send)
   menu/              the in-game overlay menu
   utils/             crypt (string encryption), hook (x64 inline-hook engine), log, mem, resource, exceptions
   proxy/             generated d3d11 export forwarders

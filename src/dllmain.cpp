@@ -12,9 +12,11 @@
 #include "patches/callvote/callvote.hpp"
 #include "patches/presence/presence.hpp"
 #include "patches/lobbymsg/lobbymsg.hpp"
+#include "patches/matchmaking/matchmaking.hpp"
 #include "patches/infoleak/infoleak.hpp"
 #include "patches/inventory/inventory.hpp"
 #include "patches/markup/markup.hpp"
+#include "patches/notetrack/notetrack.hpp"
 #include "patches/paragon/paragon.hpp"
 #include "patches/p2p/p2p.hpp"
 #include "patches/netchan/netchan.hpp"
@@ -33,6 +35,8 @@
 #include "features/logo/logo.hpp"
 #include "features/menulogo/menulogo.hpp"
 #include "features/overlay/overlay.hpp"
+#include "features/recents/recents.hpp"
+#include "features/serverlist/serverlist.hpp"
 
 static DWORD WINAPI main_thread(LPVOID param)
 {
@@ -70,11 +74,15 @@ static DWORD WINAPI main_thread(LPVOID param)
 
     lobbymsg::initialize();
 
+    matchmaking::initialize();
+
     infoleak::initialize();
 
     inventory::initialize();
 
     markup::initialize();
+
+    notetrack::initialize();
 
     paragon::initialize();
 
@@ -112,6 +120,10 @@ static DWORD WINAPI main_thread(LPVOID param)
 
     features::overlay::initialize();
 
+    recents::initialize();
+
+    serverlist::initialize();
+
     while (true)
     {
         demonware::tick();
@@ -120,13 +132,11 @@ static DWORD WINAPI main_thread(LPVOID param)
 
         p2p::tick();
 
-        netchan::tick();
-
-        workshop::tick();
-
         features::logo::tick();
 
         features::menulogo::tick();
+
+        recents::tick();
 
         Sleep(16);
     }

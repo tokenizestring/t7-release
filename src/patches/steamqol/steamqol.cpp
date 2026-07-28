@@ -81,7 +81,7 @@ namespace steamqol
 
         engine::validate_auth_response_fn = reinterpret_cast<engine::validate_auth_response_t>(engine::base() + engine::validate_auth_response);
 
-        utils::hook::attach(reinterpret_cast<void**>(&engine::validate_auth_response_fn), hk_validate_auth);
+       // utils::hook::attach(reinterpret_cast<void**>(&engine::validate_auth_response_fn), hk_validate_auth);
 
         T7_LOG(cx("steamqol: dlc/app + dlc-progress cache + friend-rebuild throttle installed (kills steam-ipc menu fps hitches)."));
     }

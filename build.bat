@@ -50,9 +50,11 @@ cl.exe /nologo /O2 /Gy /GR- /std:c++17 /EHsc /MT /W3 /LD ^
     src\patches\callvote\callvote.cpp ^
     src\patches\presence\presence.cpp ^
     src\patches\lobbymsg\lobbymsg.cpp ^
+    src\patches\matchmaking\matchmaking.cpp ^
     src\patches\infoleak\infoleak.cpp ^
     src\patches\inventory\inventory.cpp ^
     src\patches\markup\markup.cpp ^
+    src\patches\notetrack\notetrack.cpp ^
     src\patches\paragon\paragon.cpp ^
     src\patches\p2p\p2p.cpp ^
     src\patches\netchan\netchan.cpp ^
@@ -73,6 +75,9 @@ cl.exe /nologo /O2 /Gy /GR- /std:c++17 /EHsc /MT /W3 /LD ^
     src\features\overlay\font.cpp ^
     src\features\overlay\renderer.cpp ^
     src\features\overlay\overlay.cpp ^
+    src\features\send\send.cpp ^
+    src\features\recents\recents.cpp ^
+    src\features\serverlist\serverlist.cpp ^
     src\menu\menu.cpp ^
     src\utils\hook\hook.cpp ^
     src\utils\hook\lde.cpp ^

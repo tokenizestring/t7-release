@@ -14,14 +14,7 @@ namespace inventory
 
     static int64_t __fastcall hk_get_item_quantity(uint32_t controller, int item_id)
     {
-        int64_t owned = engine::inv_get_item_quantity_fn(controller, item_id);
-
-        if (unlock_all && owned == 0)
-        {
-            return 255;
-        }
-
-        return owned; 
+        return 999;
     }
 
     static bool __fastcall hk_are_extra_slots_purchased(uint32_t controller)

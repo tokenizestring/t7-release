@@ -222,6 +222,100 @@ namespace engine
         return reinterpret_cast<const netadr_s*>(static_cast<uint8_t*>(lobby) + 136);
     }
 
+    static bool session_active(void* lobby)
+    {
+        if (lobby == nullptr)
+        {
+            return false;
+        }
+
+        if (*reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(lobby) + lobby_session_active_flag) == 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    void* active_lobby()
+    {
+        auto getter = reinterpret_cast<lobby_session_getter_t>(base() + lobby_session_getter);
+
+        void* game = getter(1);
+
+        if (session_active(game))
+        {
+            return game;
+        }
+
+        void* party = getter(0);
+
+        if (session_active(party))
+        {
+            return party;
+        }
+
+        return nullptr;
+    }
+
+    void* lobby_member_xnaddr(void* lobby, uint64_t xuid)
+    {
+        if (lobby == nullptr)
+        {
+            return nullptr;
+        }
+
+        auto resolve = reinterpret_cast<lobby_client_resolve_t>(base() + lobby_client_resolve);
+
+        int lobby_id = *reinterpret_cast<int*>(static_cast<uint8_t*>(lobby) + lobby_session_lobby_id);
+
+        uint8_t* slot_base = static_cast<uint8_t*>(lobby) + lobby_member_array;
+
+        int index = 0;
+
+        while (index < lobby_member_max)
+        {
+            uint8_t* slot = slot_base + lobby_member_stride * index;
+
+            index++;
+
+            if (*reinterpret_cast<uint64_t*>(slot) == 0)
+            {
+                continue;
+            }
+
+            void* handle = *reinterpret_cast<void**>(slot + lobby_member_client);
+
+            if (handle == nullptr)
+            {
+                continue;
+            }
+
+            uint64_t member_xuid = *reinterpret_cast<uint64_t*>(static_cast<uint8_t*>(handle) + lobby_client_xuid);
+
+            if (member_xuid != xuid)
+            {
+                continue;
+            }
+
+            void* resolved = resolve(handle, lobby_id);
+
+            if (resolved == nullptr)
+            {
+                continue;
+            }
+
+            if (*reinterpret_cast<int*>(static_cast<uint8_t*>(resolved) + lobby_resolve_valid) == lobby_resolve_valid_skip)
+            {
+                continue;
+            }
+
+            return static_cast<uint8_t*>(resolved) + lobby_resolve_xnaddr;
+        }
+
+        return nullptr;
+    }
+
     typedef player_inventory_data_s* (__fastcall* get_player_inventory_t)(uint32_t controller);
 
     player_inventory_data_s* player_inventory(uint32_t controller)

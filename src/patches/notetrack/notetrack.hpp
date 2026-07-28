@@ -2,7 +2,7 @@
 
 #include "../../stdafx.hpp"
 
-namespace netchan
+namespace notetrack
 {
     void initialize();
 }

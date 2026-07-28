@@ -3,6 +3,4 @@
 namespace workshop
 {
     void initialize();
-
-    void tick();
 }

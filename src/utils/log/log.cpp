@@ -5,9 +5,13 @@
 
 namespace utils::log
 {
-    static std::ofstream log_file;
-
     static std::mutex log_mutex;
+
+    static std::filesystem::path log_path;
+
+    static size_t written_bytes = 0;
+
+    static constexpr size_t max_bytes = 4 * 1024 * 1024;
 
     std::filesystem::path root_directory()
     {
@@ -33,28 +37,50 @@ namespace utils::log
 
         std::lock_guard<std::mutex> lock(log_mutex);
 
-        log_file.open((directory / cx("t7-release.log").c_str()).string(), std::ios::out | std::ios::trunc);
+        log_path = directory / cx("t7-release.log").c_str();
 
-        if (log_file.is_open())
+        std::ofstream file(log_path.string(), std::ios::out | std::ios::trunc);
+
+        if (file.is_open())
         {
-            log_file << cx("[t7] log initialized") << std::endl;
+            file << cx("[t7] log initialized.") << '\n';
         }
+
+        written_bytes = 0;
     }
 
     void write(const std::string& message)
     {
         std::lock_guard<std::mutex> lock(log_mutex);
 
-        if (log_file.is_open())
+        if (log_path.empty())
         {
-            log_file << cx("[t7] ") << message;
-
-            if (message.empty() || message.back() != '.')
-            {
-                log_file << '.';
-            }
-
-            log_file << std::endl;
+            return;
         }
+
+        std::ios::openmode mode = written_bytes > max_bytes ? std::ios::trunc : std::ios::app;
+
+        std::ofstream file(log_path.string(), std::ios::out | mode);
+
+        if (!file.is_open())
+        {
+            return;
+        }
+
+        if (mode == std::ios::trunc)
+        {
+            written_bytes = 0;
+        }
+
+        file << cx("[t7] ") << message;
+
+        if (message.empty() || message.back() != '.')
+        {
+            file << '.';
+        }
+
+        file << '\n';
+
+        written_bytes += message.size() + 8;
     }
 }

@@ -11,8 +11,6 @@
 
 namespace netchan
 {
-    static bool toggle_latch = false;
-
     static engine::net_send_packet_t original_net_send = nullptr;
 
     static std::string adr_string(const engine::netadr_s* adr)
@@ -208,7 +206,7 @@ namespace netchan
 
         original_net_send = reinterpret_cast<engine::net_send_packet_t>(engine::base() + engine::net_send);
 
-        utils::hook::attach(reinterpret_cast<void**>(&original_net_send), hk_net_send);
+        //utils::hook::attach(reinterpret_cast<void**>(&original_net_send), hk_net_send);
 
         engine::net_get_packet_fn = reinterpret_cast<engine::net_get_packet_t>(engine::base() + engine::net_get_packet);
 
@@ -218,25 +216,6 @@ namespace netchan
 
         utils::hook::attach(reinterpret_cast<void**>(&engine::netchan_reassemble_fn), hk_netchan_reassemble);
 
-        T7_LOG(cx("netchan: gamestate + reliable + spoof + reassembly-oob protections installed, udp block ready (F7 toggles, default off)."));
-    }
-
-    void tick()
-    {
-        bool down = (GetAsyncKeyState(VK_F7) & 0x8000) != 0;
-
-        if (down && !toggle_latch)
-        {
-            toggle_latch = true;
-
-            engine::block_netchan = !engine::block_netchan;
-
-            if (engine::block_netchan) T7_LOG(cx("netchan: enabled - raw udp blocked (breaks dedi / direct connect)."));
-            else T7_LOG(cx("netchan: disabled - raw udp restored."));
-        }
-        else if (!down)
-        {
-            toggle_latch = false;
-        }
+        T7_LOG(cx("netchan: gamestate + reliable + spoof + reassembly-oob protections installed, udp block ready (menu toggle, default off)."));
     }
 }
