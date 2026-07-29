@@ -1,3 +1,5 @@
+[![Downloads](https://img.shields.io/github/downloads/tokenizestring/t7-release/total?style=for-the-badge&label=downloads)](https://github.com/tokenizestring/t7-release/releases)
+
 # t7-release
 
 A small internal DLL for Call of Duty: Black Ops III (T7), loaded as a `d3d11.dll` proxy. It's built around two things: protection and quality of life. It hardens the client against the lobby and network crash exploits that BO3 is riddled with, and it files down a lot of the engine's rough edges along the way. There are no external dependencies at all, right down to a from-scratch x64 inline hook engine.
