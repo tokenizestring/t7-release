@@ -1,4 +1,4 @@
-[![Downloads](https://img.shields.io/github/downloads/tokenizestring/t7-release/total?style=for-the-badge&label=downloads)](https://github.com/tokenizestring/t7-release/releases)
+[[![Downloads](https://img.shields.io/github/downloads/tokenizestring/t7-release/total?style=for-the-badge&label=downloads)](https://github.com/tokenizestring/t7-release/releases)](https://img.shields.io/github/downloads/tokenizestring/t7-release/total?style=for-the-badge&label=downloads&cacheSeconds=300)
 
 # t7-release
 
